@@ -44,7 +44,15 @@ public sealed class CaptureOverlay : Window
             Activate(); surface.Focus(); SelectionStarted?.Invoke(this);
             start = cursor = PixelPoint(e.GetPosition(surface)); selection = null; dragging = true; surface.CaptureMouse(); surface.InvalidateVisual();
         };
-        surface.MouseLeftButtonUp += (_, e) => { if (!dragging) return; dragging = false; surface.ReleaseMouseCapture(); cursor = PixelPoint(e.GetPosition(surface)); selection = SelectionMath.FromPoints(start, cursor, monitor.Width, monitor.Height); surface.InvalidateVisual(); };
+        surface.MouseLeftButtonUp += (_, e) =>
+        {
+            if (!dragging) return;
+            dragging = false; surface.ReleaseMouseCapture(); cursor = PixelPoint(e.GetPosition(surface));
+            // 움직이지 않은 클릭은 의도하지 않은 1px 캡처로 확정하지 않는다.
+            selection = cursor == start ? null : SelectionMath.FromPoints(start, cursor, monitor.Width, monitor.Height);
+            surface.InvalidateVisual(); e.Handled = true;
+            if (!recording) CompleteSelection();
+        };
     }
     public void ResetSelection() { selection = null; dragging = false; surface.ReleaseMouseCapture(); surface.InvalidateVisual(); }
     private Point PixelPoint(Point position)
@@ -52,14 +60,17 @@ public sealed class CaptureOverlay : Window
         var screen = surface.PointToScreen(position);
         return SelectionMath.ScreenToLocal(screen, monitor);
     }
+    private void CompleteSelection()
+    {
+        if (dragging || selection is not { } chosen) return;
+        selection = null;
+        if (recording) RegionSelected?.Invoke(SelectionMath.ToScreen(chosen, monitor));
+        else { var image = new CroppedBitmap(snapshot, chosen); image.Freeze(); Selected?.Invoke(image); }
+    }
     private void OnKey(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape) { e.Handled = true; Cancelled?.Invoke(); return; }
-        if (e.Key == Key.Enter && selection is { } chosen && !dragging)
-        {
-            if (recording) { e.Handled = true; RegionSelected?.Invoke(SelectionMath.ToScreen(chosen, monitor)); return; }
-            var image = new CroppedBitmap(snapshot, chosen); image.Freeze(); e.Handled = true; Selected?.Invoke(image); return;
-        }
+        if (e.Key == Key.Enter && selection is not null && !dragging) { e.Handled = true; CompleteSelection(); return; }
         int dx = e.Key == Key.Left ? -1 : e.Key == Key.Right ? 1 : 0, dy = e.Key == Key.Up ? -1 : e.Key == Key.Down ? 1 : 0;
         if (selection is { } rect && (dx != 0 || dy != 0))
         {
@@ -96,7 +107,7 @@ public sealed class CaptureOverlay : Window
             double cx = loupe.X + (px - lx + .5) * 8, cy = loupe.Y + (py - ly + .5) * 8;
             dc.DrawLine(new Pen(Brushes.OrangeRed, 1), new Point(cx, loupe.Top), new Point(cx, loupe.Bottom));
             dc.DrawLine(new Pen(Brushes.OrangeRed, 1), new Point(loupe.Left, cy), new Point(loupe.Right, cy));
-            string hint = owner.recording ? "녹화할 영역 드래그   ·   Enter 선택 완료   ·   Esc / 우클릭 취소   ·   한 모니터 안에서 선택" : "드래그로 선택   ·   Enter 캡처   ·   Esc / 우클릭 취소   ·   방향키 이동   ·   Shift+방향키 크기 1px";
+            string hint = owner.recording ? "녹화할 영역 드래그   ·   Enter 선택 완료   ·   Esc / 우클릭 취소   ·   한 모니터 안에서 선택" : "드래그 후 마우스를 놓으면 캡처·복사 완료   ·   Esc / 우클릭 취소";
             var bar = new Rect(Math.Max(12, (w - 760) / 2), Math.Max(12, h - 66), Math.Min(760, w - 24), 44);
             dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(15, 23, 42)), null, bar, 10, 10); DrawText(dc, hint, new Point(bar.X + 16, bar.Y + 12), 12);
         }

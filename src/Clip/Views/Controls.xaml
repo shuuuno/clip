@@ -14,6 +14,18 @@
       </ControlTemplate.Triggers>
     </ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="CaptionButton" TargetType="Button">
+    <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{DynamicResource ClipText}"/>
+    <Setter Property="Width" Value="44"/><Setter Property="Margin" Value="0"/><Setter Property="Padding" Value="0"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+      <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="2"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+      <ControlTemplate.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource ClipElevated}"/></Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource ClipAccentText}"/></Trigger>
+        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Frame" Property="Opacity" Value="0.65"/></Trigger>
+      </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style TargetType="TextBox">
     <Setter Property="Background" Value="{DynamicResource ClipCanvas}"/><Setter Property="Foreground" Value="{DynamicResource ClipText}"/>
     <Setter Property="CaretBrush" Value="{DynamicResource ClipText}"/><Setter Property="SelectionBrush" Value="{DynamicResource ClipAccentSoft}"/>

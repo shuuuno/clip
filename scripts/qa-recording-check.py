@@ -69,7 +69,7 @@ results.append({'scenario':'라이브러리 재생·일시정지·처음부터',
 key(player,'%{F4}');wait_window('Clip')
 
 # 영상 구현 후 기존 이미지 캡처·저장 회귀.
-key(wait_window('Clip'),'^+2');w=wait_window('Clip 영역 선택');drag(w);key(w,'{ENTER}')
+key(wait_window('Clip'),'^+2');w=wait_window('Clip 영역 선택');drag(w)
 main=wait_window('Clip · 저장 전');before_png=set(folder.glob('*.png'));key(main,'^s');time.sleep(.3)
 new_png=set(folder.glob('*.png'))-before_png;assert len(new_png)==1
 results.append({'scenario':'이미지 캡처·PNG 저장 회귀','passed':True,'file':str(new_png.pop())})

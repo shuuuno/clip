@@ -16,22 +16,23 @@ def window(title):
     raise RuntimeError(title)
 def key(w,keys):w.set_focus();keyboard.send_keys(keys,pause=.05,vk_packet=False);time.sleep(.2)
 def texts(w):return [c.window_text() for c in ui.window(handle=w.handle).descendants(control_type='Text')]
-def select():
+def select(hold_clipboard=False):
     key(window('Clip'),'^+2');w=window('Clip 영역 선택');w.set_focus();win32api.SetCursorPos((121,195));win32api.mouse_event(2,0,0,0,0);time.sleep(.06)
     for i in range(1,11):win32api.SetCursorPos((121+i*80,195+i*45));time.sleep(.02)
+    if hold_clipboard:win32clipboard.OpenClipboard()
     win32api.mouse_event(4,0,0,0,0);return w
 win32clipboard.OpenClipboard()
 try:win32clipboard.EmptyClipboard();win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT,'Clip clipboard sentinel')
 finally:win32clipboard.CloseClipboard()
-w=select();key(w,'{ENTER}');main=window('Clip · 저장 전');time.sleep(.3)
+w=select();main=window('Clip · 저장 전');time.sleep(.3)
 auto=ImageGrab.grabclipboard();assert isinstance(auto,Image.Image) and auto.size==(800,450),type(auto)
 assert any('캡처를 클립보드에 복사' in text for text in texts(main)),texts(main)
 before=set(folder.glob('*.png'));key(main,'^s');new=set(folder.glob('*.png'))-before;assert len(new)==1
 saved=new.pop();assert Image.open(saved).convert('RGBA').tobytes()==auto.convert('RGBA').tobytes()
-results.append({'scenario':'Enter 캡처 확정 즉시 복사·PNG와 픽셀 일치','passed':True,'size':[800,450],'file':str(saved)})
-w=select();win32clipboard.OpenClipboard()
+results.append({'scenario':'드래그 해제 즉시 캡처·복사·PNG와 픽셀 일치','passed':True,'size':[800,450],'file':str(saved)})
+w=select(hold_clipboard=True)
 try:
-    key(w,'{ENTER}');main=window('Clip · 저장 전');deadline=time.monotonic()+12
+    main=window('Clip · 저장 전');deadline=time.monotonic()+12
     while time.monotonic()<deadline and not any('클립보드가 사용 중' in text for text in texts(main)):time.sleep(.2)
     assert any('클립보드가 사용 중' in text for text in texts(main)),texts(main)
 finally:win32clipboard.CloseClipboard()

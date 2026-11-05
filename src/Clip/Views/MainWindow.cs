@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shell;
 using Clip.Imaging;
 
 namespace Clip.Views;
@@ -75,16 +76,36 @@ public sealed class MainWindow : Window
     {
         this.app = app; Title = "Clip"; Width = 1220; Height = 800; MinWidth = 960; MinHeight = 640;
         WindowStartupLocation = WindowStartupLocation.CenterScreen; Background = Theme.Background; Foreground = Theme.Text; FontFamily = Theme.Font;
+        WindowChrome.SetWindowChrome(this, new WindowChrome { CaptionHeight = 64, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(0), UseAeroCaptionButtons = false });
         var root = new DockPanel(); Content = root;
-        var header = new Border { Background = Theme.Panel, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(20, 14, 12, 14) };
+        var header = new Border { Height = 64, Background = Theme.Panel, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(20, 0, 0, 0) };
         DockPanel.SetDock(header, Dock.Top); root.Children.Add(header);
         var top = new DockPanel(); header.Child = top;
-        var actions = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(actions, Dock.Right); top.Children.Add(actions);
+        var windowActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(12, 0, 0, 0) };
+        WindowChrome.SetIsHitTestVisibleInChrome(windowActions, true); DockPanel.SetDock(windowActions, Dock.Right); top.Children.Add(windowActions);
+        Button CaptionButton(string name, string icon, Action click)
+        {
+            var button = Theme.Button(name, click); button.Style = (Style)FindResource("CaptionButton"); button.Content = Theme.Icon(icon, 12); button.ToolTip = name;
+            System.Windows.Automation.AutomationProperties.SetName(button, name); windowActions.Children.Add(button); return button;
+        }
+        CaptionButton("최소화", "minimize", () => SystemCommands.MinimizeWindow(this));
+        var maximize = CaptionButton("최대화", "maximize", () => { if (WindowState == WindowState.Maximized) SystemCommands.RestoreWindow(this); else SystemCommands.MaximizeWindow(this); });
+        StateChanged += (_, _) =>
+        {
+            bool maximized = WindowState == WindowState.Maximized;
+            root.Margin = maximized ? Platform.Native.MaximizedBorder(this) : new Thickness(0);
+            maximize.Content = Theme.Icon(maximized ? "restore" : "maximize", 12); maximize.ToolTip = maximized ? "이전 크기로" : "최대화";
+            System.Windows.Automation.AutomationProperties.SetName(maximize, (string)maximize.ToolTip);
+        };
+        DpiChanged += (_, _) => { if (WindowState == WindowState.Maximized) root.Margin = Platform.Native.MaximizedBorder(this); };
+        CaptionButton("닫기", "close", Close);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        WindowChrome.SetIsHitTestVisibleInChrome(actions, true); DockPanel.SetDock(actions, Dock.Right); top.Children.Add(actions);
         actions.Children.Add(Theme.ActionButton("설정", "settings", ShowSettings)); actions.Children.Add(Theme.ActionButton("이미지 열기", "image", OpenFile));
         actions.Children.Add(Theme.ActionButton("영역 녹화", "video", app.ToggleRecording)); actions.Children.Add(Theme.ActionButton("새 캡처", "capture", () => _ = app.CaptureAsync(), true));
         var brand = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         var title = Theme.Label("Clip", 23); title.FontWeight = FontWeights.SemiBold; brand.Children.Add(title);
-        var subtitle = Theme.Label("캡처 · 편집 · 공유", 12, Theme.Muted); subtitle.Margin = new Thickness(16, 0, 0, 0); brand.Children.Add(subtitle); top.Children.Add(brand);
+        top.Children.Add(brand);
 
         var footer = new Border { BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(20, 12, 12, 12), Background = Theme.Panel };
         DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer); var bottom = new DockPanel(); footer.Child = bottom;

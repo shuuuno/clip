@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-05T01:42:15.782989+00:00",
+  "generatedAt": "2026-11-05T02:30:28.209489+00:00",
   "title": "Clip UI 기준",
   "extensions": {
     "colorMeta": {
@@ -26,7 +26,8 @@
     "keyCharacteristics": [
       "작업별로 구분된 세로 도구",
       "항상 찾을 수 있는 복사·저장",
-      "키보드와 UI Automation 동작 유지"
+      "키보드와 UI Automation 동작 유지",
+      "앱 상단과 통합된 제목 표시줄·창 제어"
     ],
     "rules": [
       {

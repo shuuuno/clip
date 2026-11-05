@@ -72,6 +72,10 @@ public static class Theme
             "undo" => "M 8,4 L 3,9 8,14 M 3,9 L 14,9 C 23,9 23,20 14,20 L 9,20",
             "redo" => "M 16,4 L 21,9 16,14 M 21,9 L 10,9 C 1,9 1,20 10,20 L 15,20",
             "refresh" => "M 20,8 C 17,1 6,1 3,10 M 20,3 L 20,8 15,8 M 4,16 C 7,23 18,23 21,14 M 4,21 L 4,16 9,16",
+            "minimize" => "M 3,12 L 21,12",
+            "maximize" => "M 3,3 L 21,3 21,21 3,21 Z",
+            "restore" => "M 3,7 L 17,7 17,21 3,21 Z M 7,7 L 7,3 21,3 21,17 17,17",
+            "close" => "M 4,4 L 20,20 M 20,4 L 4,20",
             _ => "M 4,4 L 20,20 M 20,4 L 4,20"
         };
         var path = new Path { Data = Geometry.Parse(data), Width = size, Height = size, Stretch = Stretch.Uniform, StrokeThickness = 1.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round };

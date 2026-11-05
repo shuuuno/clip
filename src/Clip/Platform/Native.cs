@@ -24,6 +24,16 @@ public static class Native
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr handle);
     [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr context);
     [DllImport("user32.dll", SetLastError = true)] public static extern bool SetWindowDisplayAffinity(IntPtr window, uint affinity);
+    [DllImport("user32.dll")] private static extern int GetSystemMetricsForDpi(int index, uint dpi);
+    public static Thickness MaximizedBorder(Window window)
+    {
+        var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(window);
+        uint value = (uint)Math.Round(96 * dpi.DpiScaleX);
+        int padding = GetSystemMetricsForDpi(92, value); // SM_CXPADDEDBORDER
+        double x = (GetSystemMetricsForDpi(32, value) + padding) / dpi.DpiScaleX;
+        double y = (GetSystemMetricsForDpi(33, value) + padding) / dpi.DpiScaleY;
+        return new Thickness(x, y, x, y);
+    }
     public static List<MonitorArea> Monitors()
     {
         var result = new List<MonitorArea>();
