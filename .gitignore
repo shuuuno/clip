@@ -1,0 +1,14 @@
+.tools/
+**/bin/
+**/obj/
+data/
+artifacts/
+_reference/
+*.user
+**/__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
