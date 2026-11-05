@@ -36,6 +36,8 @@ public static class Program
 public sealed class ClipApplication : Application
 {
     private readonly SettingsStore store;
+    private readonly StartupRegistration startup;
+    private readonly bool startHidden;
     private HotkeyService? hotkey;
     private HotkeyService? recordHotkey;
     private bool recordHotkeyRegistered;
@@ -54,9 +56,12 @@ public sealed class ClipApplication : Application
     private readonly List<CaptureOverlay> overlays = new();
     private readonly DispatcherTimer watchdog = new() { Interval = TimeSpan.FromSeconds(60) };
     public ClipSettings Settings { get; private set; }
+    public bool StartAtLogin => startup.IsEnabled;
     public ClipApplication(string[] args)
     {
         store = new(SettingsStore.ResolveDataDirectory(args)); Settings = store.Load(); ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        startup = new(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Clip.exe"), store.DataDirectory);
+        startHidden = args.Contains("--startup", StringComparer.Ordinal);
     }
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -64,6 +69,7 @@ public sealed class ClipApplication : Application
         hotkey = new(); hotkey.Pressed += () => _ = CaptureAsync(); hotkeyRegistered = hotkey.Set(Settings.Modifiers, Settings.KeyCode);
         recordHotkey = new(); recordHotkey.Pressed += ToggleRecording; recordHotkeyRegistered = recordHotkey.Set(6, 57);
         icon = MakeIcon(); tray = new() { Icon = icon, Text = "Clip · 화면 캡처", Visible = true };
+        window.Icon = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("새 캡처", null, (_, _) => Dispatcher.InvokeAsync(() => _ = CaptureAsync()));
         menu.Items.Add("영역 녹화 / 정지·저장", null, (_, _) => Dispatcher.InvokeAsync(ToggleRecording));
@@ -76,20 +82,31 @@ public sealed class ClipApplication : Application
         watchdog.Tick += (_, _) => CancelCapture();
         recordingTimer.Tick += (_, _) => { if (tray is not null && recorder is not null) tray.Text = "Clip · 녹화 " + recorder.Elapsed.ToString(@"hh\:mm\:ss") + " · 우클릭으로 정지"; };
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += DisplayChanged;
-        window.Show();
+        if (startHidden) new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
+        else window.Show();
         if (!hotkeyRegistered) window.SetStatus("캡처 단축키가 다른 앱과 충돌합니다. 새 캡처 버튼을 쓰거나 설정에서 바꿔 주세요.");
         else if (store.Warning is not null) window.SetStatus(store.Warning);
     }
-    public string? ApplySettings(ClipSettings next)
+    public string? ApplySettings(ClipSettings next, bool startAtLogin)
     {
         if (recordHotkeyRegistered && next.Modifiers == 6 && next.KeyCode == 57) return "Ctrl+Shift+9는 녹화 시작·정지 단축키입니다.";
         bool changed = next.Modifiers != Settings.Modifiers || next.KeyCode != Settings.KeyCode || !hotkeyRegistered;
         if (changed && !hotkey!.Set(next.Modifiers, next.KeyCode)) return "이미 사용 중인 단축키입니다. 기존 설정을 유지했습니다.";
-        try { store.Save(next); Settings = next; hotkeyRegistered = true; return null; }
+        StartupEntry? oldStartup = null; bool startupChanged = false;
+        try
+        {
+            oldStartup = startup.Read();
+            startup.SetEnabled(startAtLogin);
+            startupChanged = !Equals(oldStartup, startup.Read());
+            store.Save(next); Settings = next; hotkeyRegistered = true; return null;
+        }
         catch (Exception e)
         {
+            string rollback = "";
+            if (startupChanged)
+                try { startup.Restore(oldStartup); } catch (Exception restoreError) { rollback = " 자동 실행 설정 복원 실패: " + restoreError.Message; }
             if (changed) hotkeyRegistered = hotkey!.Set(Settings.Modifiers, Settings.KeyCode);
-            return "설정 저장 실패: " + e.Message;
+            return "설정 저장 실패: " + e.Message + rollback;
         }
     }
     public Task CaptureAsync() => SelectRegionAsync(false);

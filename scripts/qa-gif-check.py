@@ -29,8 +29,17 @@ def edits(w,first,last,width,fps='15'):
     fields=u(w).descendants(control_type='Edit');assert len(fields)==3
     for field,value in zip(fields,[first,last,width]):field.set_edit_text(str(value))
     u(w).descendants(control_type='ComboBox')[0].select(fps)
+def library_item(name):
+    main=window('Clip');listing=u(main).child_window(control_type='List').wrapper_object()
+    if listing.iface_scroll.CurrentVerticallyScrollable:listing.iface_scroll.SetScrollPercent(-1,0);time.sleep(.1)
+    for attempt in range(20):
+        found=[c for c in u(main).descendants(control_type='ListItem') if name in c.window_text()]
+        if found:break
+        listing.scroll('down','page');time.sleep(.1)
+    assert found,name
+    return found[0]
 def open_video(name):
-    main=window('Clip');item=next(c for c in u(main).descendants(control_type='ListItem') if name in c.window_text());item.select()
+    library_item(name).select()
     player=window('Clip · '+name)
     wait_value(lambda:button(player,'GIF 내보내기').is_enabled(),bool);return player
 def export_dialog(player):
@@ -57,7 +66,7 @@ click(dialog,'GIF 보기');viewer=window('Clip GIF · '+gif.name);first=texts(vi
 click(viewer,'일시 정지');time.sleep(.1);paused=texts(viewer);time.sleep(.2);assert paused==texts(viewer);shot(viewer,'22-gif-preview.png');key(viewer,'%{F4}')
 results.append({'scenario':'GIF 반복 미리보기·일시 정지','passed':True,'first':first,'second':second})
 click(dialog,'닫기');window('Clip · qa-pattern.mp4');key(player,'%{F4}');main=window('Clip')
-next(c for c in u(main).descendants(control_type='ListItem') if gif.name in c.window_text()).select();viewer=window('Clip GIF · '+gif.name);key(viewer,'%{F4}');results.append({'scenario':'라이브러리 GIF 재열기','passed':True})
+library_item(gif.name).select();viewer=window('Clip GIF · '+gif.name);key(viewer,'%{F4}');results.append({'scenario':'라이브러리 GIF 재열기','passed':True})
 player=open_video('qa-long.mp4');dialog=export_dialog(player);before=gif_files();start_long(dialog);click(dialog,'변환 취소');wait_done(dialog,'변환을 취소했습니다');assert gif_files()==before and not list(folder.glob('.clip-*.tmp'))
 results.append({'scenario':'변환 중 취소·미완료 파일 정리','passed':True})
 start_long(dialog);key(dialog,'%{F4}');window('Clip · qa-long.mp4');assert not visible('Clip · GIF 내보내기');assert gif_files()==before and not list(folder.glob('.clip-*.tmp'))

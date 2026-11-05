@@ -14,6 +14,7 @@ main.maximize();time.sleep(.3)
 ui=Application(backend='uia').connect(process=a.pid).window(handle=main.handle)
 folder=Path(a.data)/'captures';original=folder/'qa-strip.png';source=Image.open(original).convert('RGBA');source_hash=hashlib.sha256(original.read_bytes()).hexdigest();results=[]
 def key(keys):
+    assert main.is_enabled(),[(w.window_text(),w.is_visible()) for w in native.windows()]
     main.set_focus();keyboard.send_keys(keys,pause=.04,vk_packet=False);time.sleep(.15)
 def button(name):return ui.child_window(title=name,control_type='Button').wrapper_object()
 def click(name):button(name).invoke();time.sleep(.15)
@@ -57,7 +58,7 @@ results.append({'scenario':'가로 띠 100px 제거·PNG/클립보드·Undo/Redo
 key('^z');key('j');drag(380,250,300,250);click('띠 제거 적용 · Enter');expected=cut(source,False,300,80);dimensions(720,500);file=save(expected)
 results.append({'scenario':'세로 띠 80px 제거·버튼 적용·PNG/클립보드','passed':True,'file':file})
 key('^z');key('h');drag(350,0,350,500);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ENTER}');dimensions(800,500);key('{ESC}')
-drag(350,100,350,100);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ESC}')
+drag(350,100,350,100);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ESC}');assert main.is_visible() and main.is_enabled()
 results.append({'scenario':'전체 이미지·길이 0 선택 차단','passed':True})
 key('n');drag(100,50,100,50);assert any('주석 1개' in t for t in texts());key('h');drag(350,100,350,200);key('^z');assert not button('띠 제거 적용 · Enter').is_enabled();key('^+z')
 annotated=copied();drag(350,100,350,200);key('{ENTER}');assert any('주석 0개' in t for t in texts());file=save(cut(annotated,True,100,100));key('^z');same(copied(),annotated);assert any('주석 1개' in t for t in texts());key('^+z')

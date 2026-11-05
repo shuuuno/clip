@@ -2,19 +2,23 @@
 import sys,time,json,ctypes
 ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
 from pywinauto import Application,Desktop
+import win32api
 sys.stdout.reconfigure(encoding='utf-8');pid=int(sys.argv[1]);desktop=Desktop(backend='uia')
 def icons():
     result=[]
     for name in ['Shell_TrayWnd','TopLevelWindowForOverflowXamlIsland']:
         for root in desktop.windows(class_name=name):
-            root.set_focus()
-            result.extend(c for c in root.descendants(control_type='Button') if c.is_visible() and c.window_text().startswith('Clip ·'))
+            result.extend((root,c) for c in root.descendants(control_type='Button') if c.is_visible() and c.window_text().startswith('Clip ·'))
     return result
 found=icons()
-if not found:
+for attempt in range(3):
+    if found:break
     tray=desktop.window(class_name='Shell_TrayWnd');buttons=[c for c in tray.descendants(control_type='Button') if '숨겨진 아이콘' in c.window_text()]
-    assert len(buttons)==1,[c.window_text() for c in buttons];buttons[0].click_input();time.sleep(.2);found=icons()
-assert len(found)==1,[c.window_text() for c in found];found[0].click_input(button='right')
+    assert len(buttons)==1,[c.window_text() for c in buttons];buttons[0].invoke()
+    deadline=time.monotonic()+1
+    while time.monotonic()<deadline and not found:time.sleep(.1);found=icons()
+assert len(found)==1,[c.window_text() for _,c in found]
+root,icon=found[0];root.set_focus();time.sleep(.15);r=icon.rectangle();win32api.SetCursorPos(((r.left+r.right)//2,(r.top+r.bottom)//2));win32api.mouse_event(8,0,0,0,0);win32api.mouse_event(16,0,0,0,0)
 app=Application(backend='uia').connect(process=pid)
 deadline=time.monotonic()+5
 while time.monotonic()<deadline:

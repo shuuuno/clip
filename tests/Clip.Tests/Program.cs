@@ -7,6 +7,7 @@ using Clip.Imaging;
 using Clip.Platform;
 using Clip.Views;
 using Clip.Recording;
+using Microsoft.Win32;
 
 internal static class Program
 {
@@ -143,6 +144,38 @@ internal static class Program
                 var store = new SettingsStore(Path.Combine(work, "config")); var defaults = store.Load(); File.WriteAllText(store.PathName, "broken");
                 Equal(defaults, store.Load()); Equal("broken", File.ReadAllText(store.PathName)); Check(store.Warning is not null, "복구 안내");
                 var expected = new ClipSettings(work, 6, 51); store.Save(expected); Equal(expected, new SettingsStore(store.DataDirectory).Load());
+            });
+            Run("자동 실행 명령줄 경로·공백·루트 경로·길이 제한", () =>
+            {
+                var startup = new StartupRegistration(@"D:\Clip App\Clip.exe", @"D:\Clip Data");
+                Equal("\"D:\\Clip App\\Clip.exe\" --startup --data-dir \"D:\\Clip Data\"", startup.Command);
+                var rootStartup = new StartupRegistration(@"D:\Clip.exe", @"D:\");
+                Check(rootStartup.Command.EndsWith("\"D:\\\\\"", StringComparison.Ordinal), "루트 경로 끝 역슬래시 이스케이프");
+                Throws<ArgumentException>(() => new StartupRegistration("Clip.exe", @"D:\data"));
+                string key = @"Software\Clip.Tests\" + Guid.NewGuid().ToString("N");
+                try
+                {
+                    var tooLong = new StartupRegistration(@"D:\Clip.exe", @"D:\" + new string('a', 250), key);
+                    Throws<IOException>(() => tooLong.SetEnabled(true)); Check(tooLong.Read() is null, "긴 명령 실패는 등록하지 않음");
+                }
+                finally { Registry.CurrentUser.DeleteSubKeyTree(key, false); }
+            });
+            Run("자동 실행 등록·해제·다른 복사본 보존·롤백", () =>
+            {
+                string key = @"Software\Clip.Tests\" + Guid.NewGuid().ToString("N");
+                try
+                {
+                    var startup = new StartupRegistration(@"D:\Clip App\Clip.exe", @"D:\Clip Data", key);
+                    Check(!startup.IsEnabled && startup.Read() is null, "기본 미등록");
+                    startup.SetEnabled(true); Check(startup.IsEnabled, "활성화"); Equal(startup.Command, (string)startup.Read()!.Value);
+                    startup.SetEnabled(false); Check(startup.Read() is null, "비활성화 삭제");
+                    var other = new StartupEntry("\"D:\\Other Clip\\Clip.exe\" --startup", RegistryValueKind.String);
+                    startup.Restore(other); startup.SetEnabled(false); Equal(other, startup.Read()!);
+                    startup.SetEnabled(true); Check(startup.IsEnabled, "새 복사본으로 명시적 등록 변경");
+                    startup.Restore(other); Equal(other, startup.Read()!); Check(!startup.IsEnabled, "이전 항목 롤백");
+                    startup.Restore(null); Check(startup.Read() is null, "원래 미등록 상태 복원");
+                }
+                finally { Registry.CurrentUser.DeleteSubKeyTree(key, false); }
             });
             Run("전역 단축키 충돌·기존 등록 유지·해제", () =>
             {

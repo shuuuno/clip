@@ -11,22 +11,32 @@ public sealed class SettingsDialog : Window
 {
     private readonly TextBox folder;
     private readonly Button shortcut;
+    private readonly CheckBox startAtLogin;
     private readonly TextBlock status = Theme.Label("설정은 이 기기에만 저장됩니다.", 12, Theme.Muted);
     private uint modifiers, key;
     private bool recording;
-    private readonly Func<ClipSettings, string?> apply;
-    public SettingsDialog(Window owner, ClipSettings settings, Func<ClipSettings, string?> apply)
+    private readonly Func<ClipSettings, bool, string?> apply;
+    public SettingsDialog(Window owner, ClipSettings settings, bool startupEnabled, Func<ClipSettings, bool, string?> apply)
     {
         this.apply = apply; modifiers = settings.Modifiers; key = settings.KeyCode;
-        Owner = owner; Title = "Clip · 설정"; Width = 610; Height = 390; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Brushes.White;
-        var stack = new StackPanel { Margin = new Thickness(24) }; stack.Children.Add(Theme.Label("설정", 24));
-        var label = Theme.Label("PNG 저장 폴더", 14); label.Margin = new Thickness(0, 22, 0, 8); stack.Children.Add(label);
+        Owner = owner; Title = "Clip · 설정"; Width = 620; Height = 620; MinWidth = 560; MinHeight = 520; WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Theme.Text; FontFamily = Theme.Font;
+        var root = new DockPanel(); Content = root;
+        var footer = new Border { Padding = new Thickness(28, 16, 20, 20), BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 1, 0, 0), Background = Theme.Panel }; DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
+        var footerContent = new StackPanel(); footer.Child = footerContent;
+        status.TextWrapping = TextWrapping.Wrap; status.Margin = new Thickness(0, 0, 0, 14); footerContent.Children.Add(status);
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; actions.Children.Add(Theme.Button("취소", () => DialogResult = false)); actions.Children.Add(Theme.Button("저장", Save, true)); footerContent.Children.Add(actions);
+        var stack = new StackPanel { Margin = new Thickness(28, 24, 28, 24) }; root.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        var title = Theme.Label("설정", 24); title.FontWeight = FontWeights.SemiBold; stack.Children.Add(title);
+        var intro = Theme.Label("시작 방식과 캡처 환경을 설정하세요.", 13, Theme.Muted); intro.Margin = new Thickness(0, 8, 0, 26); stack.Children.Add(intro);
+        startAtLogin = new CheckBox { Content = "Windows 로그인 시 시작", IsChecked = startupEnabled, FontSize = 14 }; stack.Children.Add(startAtLogin);
+        var startupNote = Theme.Label("창을 띄우지 않고 트레이에서 대기합니다.\n현재 사용자에게만 등록하며 저장 버튼을 눌러야 적용됩니다.", 12, Theme.Muted); startupNote.TextWrapping = TextWrapping.Wrap; startupNote.Margin = new Thickness(50, 8, 0, 0); stack.Children.Add(startupNote);
+        stack.Children.Add(new Border { Height = 1, Background = Theme.Line, Margin = new Thickness(0, 24, 0, 24) });
+        var label = Theme.Label("저장 폴더", 14); label.FontWeight = FontWeights.SemiBold; label.Margin = new Thickness(0, 0, 0, 10); stack.Children.Add(label);
         var row = new DockPanel(); var browse = Theme.Button("폴더 선택", Browse); DockPanel.SetDock(browse, Dock.Right); row.Children.Add(browse);
         folder = new TextBox { Text = settings.CaptureDirectory, FontSize = 13, Padding = new Thickness(8), VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) }; row.Children.Add(folder); stack.Children.Add(row);
-        var note = Theme.Label("폴더를 바꿔도 기존 이미지는 이동하지 않습니다.", 12, Theme.Muted); note.Margin = new Thickness(0, 7, 0, 20); stack.Children.Add(note);
-        stack.Children.Add(Theme.Label("캡처 단축키", 14)); shortcut = Theme.Button(KeyName(modifiers, key), () => { }); shortcut.Click += (_, _) => { recording = true; shortcut.Content = "새 조합을 누르세요 · Esc 취소"; shortcut.Focus(); }; shortcut.HorizontalAlignment = HorizontalAlignment.Left; shortcut.Margin = new Thickness(0, 8, 0, 18); stack.Children.Add(shortcut);
-        status.TextWrapping = TextWrapping.Wrap; status.Margin = new Thickness(0, 0, 0, 15); stack.Children.Add(status);
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; actions.Children.Add(Theme.Button("취소", () => DialogResult = false)); actions.Children.Add(Theme.Button("저장", Save, true)); stack.Children.Add(actions); Content = stack;
+        var note = Theme.Label("PNG · MP4 · GIF를 저장합니다. 기존 파일은 이동하지 않습니다.", 12, Theme.Muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 8, 0, 24); stack.Children.Add(note);
+        var shortcutLabel = Theme.Label("캡처 단축키", 14); shortcutLabel.FontWeight = FontWeights.SemiBold; stack.Children.Add(shortcutLabel);
+        shortcut = Theme.Button(KeyName(modifiers, key), () => { }); shortcut.Click += (_, _) => { recording = true; shortcut.Content = "새 조합을 누르세요 · Esc 취소"; shortcut.Focus(); }; shortcut.HorizontalAlignment = HorizontalAlignment.Left; shortcut.Margin = new Thickness(0, 10, 0, 0); stack.Children.Add(shortcut);
         PreviewKeyDown += Record;
     }
     public static string KeyName(uint modifiers, uint key)
@@ -51,13 +61,14 @@ public sealed class SettingsDialog : Window
     }
     private void Save()
     {
+        if (recording) { status.Text = "단축키 조합을 입력하거나 Esc로 취소한 뒤 저장해 주세요."; return; }
         try
         {
             if (!Path.IsPathFullyQualified(folder.Text)) throw new IOException("전체 폴더 경로를 입력하세요.");
             string path = Path.GetFullPath(folder.Text); Directory.CreateDirectory(path);
             string probe = Path.Combine(path, ".clip-write-" + Guid.NewGuid().ToString("N"));
             using (var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { stream.WriteByte(0); }
-            string? error = apply(new(path, modifiers, key)); if (error is not null) { status.Text = error; return; }
+            string? error = apply(new(path, modifiers, key), startAtLogin.IsChecked == true); if (error is not null) { status.Text = error; return; }
             DialogResult = true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { status.Text = "저장할 수 없습니다: " + e.Message; }
