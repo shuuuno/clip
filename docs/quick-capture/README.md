@@ -21,6 +21,8 @@
 
 설치 파일: `artifacts/release/0.7.0/packages/Clip-win-Setup.exe`.
 
+설치 파일 SHA256: `F2232FA22BD6F8F835C12E73E5E56FD16125F21564547BECFCB0F9223F24838A`. 최종 nupkg의 481개 항목에 사용자 데이터·테스트·참고 앱·도구·PDB는 포함되지 않았다.
+
 ## 화면 검증 보류
 
 Windows native pipe 연결이 실패했고 대체 `orca` 실행 파일도 없다. 앱 내부 통합 검증 시 화면을 확인한 결과 Windows가 잠겨 있어 화면 검증을 중단했다. 클립보드 접근도 `CLIPBRD_E_CANT_OPEN`으로 실패했다. 잠금 화면은 제품 증거로 사용하지 않는다.

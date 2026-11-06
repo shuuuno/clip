@@ -12,4 +12,9 @@ main 병합·push·첫 Release 업로드는 하지 않았습니다. 화면 검�
 
 ## 발송 상태
 
-발송 결과를 확인한 뒤 기록한다.
+- 구현 커밋: `e67f403`.
+- `ask-grokbot.ps1 --source codex --timeout 60`으로 본문 발송.
+- 메시지 ID: `msg_52b69df6ecec`, route: `default`.
+- 큐 등록과 Bot 깨우기는 확인했다. 60초 수신 대기 후 timeout으로 종료했다(실제 프로세스 종료 코드 1).
+- **수신 확인 응답은 아직 없다.** 큐 등록을 수신 완료나 사용자 전달 완료로 간주하지 않는다.
+- 최종 확인: 저장소 PRIVATE, Release 없음, main 병합·push 없음. GitHub CLI 활성 계정은 작업 전 계정으로 복원했다. 테스트 앱 프로세스는 남아 있지 않다.
