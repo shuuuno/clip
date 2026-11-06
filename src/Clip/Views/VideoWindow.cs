@@ -14,17 +14,17 @@ public sealed class VideoWindow : Window
     public VideoWindow(Window owner, string path, string exportDirectory, Action saved)
     {
         Owner = owner; Title = "Clip · " + Path.GetFileName(path); Width = 900; Height = 650; MinWidth = 560; MinHeight = 400;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Brushes.White;
-        var root = new DockPanel { Margin = new Thickness(18) }; Content = root;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Theme.Text;
+        var root = new DockPanel { Margin = new Thickness(24) }; Content = root;
         var panel = new StackPanel(); DockPanel.SetDock(panel, Dock.Bottom); root.Children.Add(panel);
         var status = Theme.Label("영상 여는 중…", 12, Theme.Muted); status.Margin = new Thickness(0, 12, 0, 8); panel.Children.Add(status);
         var controls = new WrapPanel { Orientation = Orientation.Horizontal }; panel.Children.Add(controls);
         controls.IsEnabled = false;
         var media = new MediaElement { LoadedBehavior = MediaState.Manual, UnloadedBehavior = MediaState.Close, Stretch = Stretch.Uniform };
-        controls.Children.Add(Theme.Button("재생", media.Play, true)); controls.Children.Add(Theme.Button("일시 정지", media.Pause));
-        controls.Children.Add(Theme.Button("처음부터", () => { media.Position = TimeSpan.Zero; media.Play(); }));
-        var seek = new Slider { Minimum = 0, Maximum = 1, Width = 250, Margin = new Thickness(12, 0, 0, 0), IsEnabled = false, IsMoveToPointEnabled = true };
-        controls.Children.Add(seek);
+        controls.Children.Add(Theme.ActionButton("재생", "play", media.Play, true)); controls.Children.Add(Theme.QuietButton("일시 정지", "pause", media.Pause));
+        controls.Children.Add(Theme.QuietButton("처음부터", "restart", () => { media.Position = TimeSpan.Zero; media.Play(); }));
+        var seek = new Slider { Minimum = 0, Maximum = 1, Margin = new Thickness(0, 8, 0, 8), IsEnabled = false, IsMoveToPointEnabled = true };
+        System.Windows.Automation.AutomationProperties.SetName(seek, "영상 재생 위치"); panel.Children.Insert(1, seek);
         controls.Children.Add(Theme.Button("GIF 내보내기", () =>
         {
             if (openingExport || exporting is not null) return;

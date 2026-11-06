@@ -15,6 +15,24 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--ui-review-app")
+        {
+            // 녹화창 비교 촬영에만 사용한다. 제품 실행 경로와 캡처 제외 정책은 변경하지 않는다.
+            Native.SetProcessDpiAwarenessContext(new IntPtr(-4));
+            var application = new ClipApplication(new[] { "--data-dir", args[2] });
+            var photographed = new HashSet<Window>();
+            var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            timer.Tick += (_, _) =>
+            {
+                foreach (var recording in application.Windows.OfType<RecordingWindow>().Where(w => w.IsVisible && !photographed.Contains(w)))
+                {
+                    bool allowed = Native.SetWindowDisplayAffinity(new System.Windows.Interop.WindowInteropHelper(recording).Handle, 0);
+                    if (!allowed) throw new InvalidOperationException("녹화창 비교 촬영 허용 실패");
+                    photographed.Add(recording);
+                }
+            };
+            timer.Start(); return application.Run();
+        }
         if (args.Length == 5 && args[0] == "--capture-stress") return CaptureStress(args);
         if (args.Length == 3 && args[0] == "--gif-stress") return GifStress(args);
         string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../.."));

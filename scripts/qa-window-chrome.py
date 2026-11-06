@@ -5,7 +5,7 @@ import win32api,win32con,win32gui
 from pywinauto import Application,keyboard,mouse
 from PIL import ImageGrab
 ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
-p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--exe',required=True);p.add_argument('--data',required=True);p.add_argument('--report',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--exe',required=True);p.add_argument('--data',required=True);p.add_argument('--report',required=True);p.add_argument('--screens',default='artifacts/ui/screens');a=p.parse_args();Path(a.screens).mkdir(parents=True,exist_ok=True)
 native=Application(backend='win32').connect(process=a.pid);ui=Application(backend='uia').connect(process=a.pid);results=[]
 def main():return next(w for w in native.windows() if w.window_text()=='Clip' and w.is_visible())
 def button(name):return ui.window(handle=main().handle).child_window(title=name,control_type='Button').wrapper_object()
@@ -15,11 +15,12 @@ def drag(start,end):
     assert win32gui.WindowFromPoint(start)==main().handle,'드래그 지점이 다른 창에 가려짐'
     mouse.press(coords=start)
     try:
-        for i in range(1,11):mouse.move(coords=(round(start[0]+(end[0]-start[0])*i/10),round(start[1]+(end[1]-start[1])*i/10)));time.sleep(.03)
+        for i in range(1,11):mouse.move(coords=(round(start[0]+(end[0]-start[0])*i/10),round(start[1]+(end[1]-start[1])*i/10)));time.sleep(.05)
+        mouse.move(coords=end);time.sleep(.2)
     finally:mouse.release(coords=end)
 def shot(name):
-    w=main();w.set_focus();time.sleep(.2);r=w.rectangle();ImageGrab.grab(bbox=(r.left,r.top,r.right,r.bottom)).save('artifacts/ui/screens/'+name)
-w=main();w.set_focus();scale=ctypes.windll.user32.GetDpiForWindow(w.handle)/96
+    w=main();w.set_focus();time.sleep(.2);r=w.rectangle();ImageGrab.grab(bbox=(r.left,r.top,r.right,r.bottom)).save(Path(a.screens)/name)
+w=main();w.restore();w.set_focus();scale=ctypes.windll.user32.GetDpiForWindow(w.handle)/96
 w.move_window(400,100,int(1220*scale),int(800*scale));time.sleep(.3);r=w.rectangle()
 click('설정');settings=next(w for w in native.windows() if w.window_text()=='Clip · 설정' and w.is_visible())
 ui.window(handle=settings.handle).child_window(title='취소',control_type='Button').click_input();time.sleep(.2)

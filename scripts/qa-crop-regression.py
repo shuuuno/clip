@@ -7,7 +7,7 @@ import win32api
 sys.stdout.reconfigure(encoding='utf-8');ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
 pid=int(sys.argv[1]);main=next(w for w in Application(backend='win32').connect(process=pid).windows() if w.window_text()=='Clip');main.maximize()
 ui=Application(backend='uia').connect(process=pid).window(handle=main.handle)
-next(c for c in ui.descendants(control_type='ComboBox') if '50%' in c.texts()).select('100%')
+next(c for c in ui.descendants(control_type='ComboBox') if c.window_text()=='확대 비율' or '50%' in c.texts()).select('100%')
 ui.child_window(title='크롭  C',control_type='Button').invoke();time.sleep(.2)
 def key(keys):main.set_focus();keyboard.send_keys(keys,pause=.05,vk_packet=False);time.sleep(.2)
 def copy():key('^c');return ImageGrab.grabclipboard().convert('RGBA')
@@ -23,4 +23,4 @@ win32api.mouse_event(4,0,0,0,0);key('{ENTER}');after=copy();expected=before.crop
 assert after.size==expected.size and after.tobytes()==expected.tobytes()
 key('^z');restored=copy();assert restored.size==before.size and restored.tobytes()==before.tobytes()
 result={'scenario':'띠 제거 후 기존 크롭·클립보드·Undo 회귀','passed':True,'crop_size':list(after.size)}
-Path('artifacts/ui/crop-regression-0.4.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(result,ensure_ascii=False))
+Path(sys.argv[2] if len(sys.argv)>2 else 'artifacts/ui/crop-regression-0.4.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(result,ensure_ascii=False))

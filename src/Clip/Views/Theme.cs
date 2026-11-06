@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -24,6 +25,8 @@ public static class Theme
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, args) =>
         {
             if (sender is not Window window || window.AllowsTransparency) return;
+            window.FontFamily = Font; window.FontSize = 13; window.UseLayoutRounding = true;
+            TextOptions.SetTextFormattingMode(window, TextFormattingMode.Display);
             if (window.Icon is null && Application.Current.MainWindow?.Icon is { } icon) window.Icon = icon;
             int dark = 1; var handle = new System.Windows.Interop.WindowInteropHelper(window).Handle;
             _ = DwmSetWindowAttribute(handle, 20, ref dark, sizeof(int));
@@ -33,7 +36,7 @@ public static class Theme
     public static Button Button(string text, Action click, bool primary = false)
     {
         var button = new Button { Content = text, FontFamily = Font };
-        if (primary) { button.Background = Accent; button.Foreground = Brushes.White; }
+        if (primary) button.Style = (Style)Application.Current.FindResource("PrimaryButton");
         button.Click += (_, _) => click(); return button;
     }
     public static Button ActionButton(string text, string icon, Action click, bool primary = false)
@@ -46,10 +49,18 @@ public static class Theme
     }
     public static Button ToolButton(string name, string label, string icon, Action click)
     {
-        var button = ActionButton(label, icon, click);
-        button.Width = 100; button.Height = 40; button.Padding = new Thickness(10, 6, 8, 6); button.Margin = new Thickness(0, 2, 0, 2);
-        button.HorizontalContentAlignment = HorizontalAlignment.Left; button.Background = Brushes.Transparent; button.BorderThickness = new Thickness(1);
-        button.FontSize = 12; button.ToolTip = name; AutomationProperties.SetName(button, name); return button;
+        var button = Button(label, click); button.Style = (Style)Application.Current.FindResource("ToolButton");
+        var content = new DockPanel();
+        var shortcut = Label(name[^1..], 11, Muted); shortcut.Margin = new Thickness(6, 0, 0, 0);
+        DockPanel.SetDock(shortcut, Dock.Right); content.Children.Add(shortcut);
+        var glyph = Icon(icon, 16); glyph.Margin = new Thickness(0, 0, 8, 0);
+        DockPanel.SetDock(glyph, Dock.Left); content.Children.Add(glyph); content.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        button.Content = content; button.ToolTip = name;
+        AutomationProperties.SetName(button, name); AutomationProperties.SetAcceleratorKey(button, name[^1..]); return button;
+    }
+    public static Button QuietButton(string text, string icon, Action click)
+    {
+        var button = ActionButton(text, icon, click); button.Background = Brushes.Transparent; return button;
     }
     public static Path Icon(string name, double size = 18)
     {
@@ -76,10 +87,14 @@ public static class Theme
             "maximize" => "M 3,3 L 21,3 21,21 3,21 Z",
             "restore" => "M 3,7 L 17,7 17,21 3,21 Z M 7,7 L 7,3 21,3 21,17 17,17",
             "close" => "M 4,4 L 20,20 M 20,4 L 4,20",
+            "play" => "M 7,3 L 21,12 7,21 Z",
+            "pause" => "M 7,3 L 7,21 M 17,3 L 17,21",
+            "restart" => "M 5,3 L 5,21 M 21,3 L 8,12 21,21 Z",
+            "stop" => "M 5,5 L 19,5 19,19 5,19 Z",
             _ => "M 4,4 L 20,20 M 20,4 L 4,20"
         };
         var path = new Path { Data = Geometry.Parse(data), Width = size, Height = size, Stretch = Stretch.Uniform, StrokeThickness = 1.6, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, StrokeLineJoin = PenLineJoin.Round };
-        path.SetBinding(Shape.StrokeProperty, new Binding("Foreground") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(Button), 1) });
+        path.SetBinding(Shape.StrokeProperty, new Binding("Foreground") { RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(ButtonBase), 1) });
         return path;
     }
     public static TextBlock Label(string text, double size = 13, Brush? color = null) => new() { Text = text, FontFamily = Font, FontSize = size, Foreground = color ?? Text, VerticalAlignment = VerticalAlignment.Center };

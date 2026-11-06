@@ -5,7 +5,7 @@ from pywinauto import Application,keyboard
 from PIL import Image
 sys.stdout.reconfigure(encoding='utf-8')
 ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
-p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--data',required=True);p.add_argument('--report',default='artifacts/ui/gif-ui-results.json');a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--data',required=True);p.add_argument('--report',default='artifacts/ui/gif-ui-results.json');p.add_argument('--screens',default='artifacts/ui/screens');a=p.parse_args();Path(a.screens).mkdir(parents=True,exist_ok=True)
 native=Application(backend='win32').connect(process=a.pid);ui=Application(backend='uia').connect(process=a.pid)
 folder=Path(a.data)/'captures';before_hash={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in folder.glob('*.mp4')};results=[]
 def wait_value(getter,predicate,seconds=20):
@@ -49,7 +49,7 @@ def start_long(w):
     edits(w,0,30,1280,'30');click(w,'GIF 저장');wait_value(lambda:button(w,'변환 취소').is_enabled(),bool)
     wait_value(lambda:u(w).descendants(control_type='ProgressBar')[0].iface_range_value.CurrentValue,lambda n:n>0)
 def shot(w,name):
-    path=Path('artifacts/ui/screens')/name;w.capture_as_image().save(path)
+    path=Path(a.screens)/name;w.capture_as_image().save(path)
 
 if visible('Clip · GIF 내보내기'):
     dialog=window('Clip · GIF 내보내기');player=window('Clip · qa-pattern.mp4')

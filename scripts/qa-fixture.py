@@ -3,6 +3,8 @@ import ctypes,sys,time
 ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
 import tkinter as tk
 root=tk.Tk();root.title('Clip QA fixture');root.geometry('1000x700+30+30');root.attributes('-topmost',True)
+if '--full-screen' in sys.argv:
+    root.overrideredirect(True);root.geometry(f'{root.winfo_screenwidth()}x{root.winfo_screenheight()}+0+0')
 canvas=tk.Canvas(root,bg='#e9eef5',highlightthickness=0);canvas.pack(fill='both',expand=True)
 canvas.create_text(30,40,anchor='w',text='Clip — synthetic capture test',font=('Arial',24,'bold'),fill='#142337')
 for i,color in enumerate(['#ed4b4b','#e8bb35','#48b983','#4897df','#9463d9']):

@@ -27,16 +27,19 @@ public sealed class SettingsDialog : Window
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right }; actions.Children.Add(Theme.Button("취소", () => DialogResult = false)); actions.Children.Add(Theme.Button("저장", Save, true)); footerContent.Children.Add(actions);
         var stack = new StackPanel { Margin = new Thickness(28, 24, 28, 24) }; root.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
         var title = Theme.Label("설정", 24); title.FontWeight = FontWeights.SemiBold; stack.Children.Add(title);
-        var intro = Theme.Label("시작 방식과 캡처 환경을 설정하세요.", 13, Theme.Muted); intro.Margin = new Thickness(0, 8, 0, 26); stack.Children.Add(intro);
+        var intro = Theme.Label("시작 방식, 저장 위치, 단축키", 13, Theme.Muted); intro.Margin = new Thickness(0, 8, 0, 24); stack.Children.Add(intro);
         startAtLogin = new CheckBox { Content = "Windows 로그인 시 시작", IsChecked = startupEnabled, FontSize = 14 }; stack.Children.Add(startAtLogin);
         var startupNote = Theme.Label("창을 띄우지 않고 트레이에서 대기합니다.\n현재 사용자에게만 등록하며 저장 버튼을 눌러야 적용됩니다.", 12, Theme.Muted); startupNote.TextWrapping = TextWrapping.Wrap; startupNote.Margin = new Thickness(50, 8, 0, 0); stack.Children.Add(startupNote);
         stack.Children.Add(new Border { Height = 1, Background = Theme.Line, Margin = new Thickness(0, 24, 0, 24) });
         var label = Theme.Label("저장 폴더", 14); label.FontWeight = FontWeights.SemiBold; label.Margin = new Thickness(0, 0, 0, 10); stack.Children.Add(label);
         var row = new DockPanel(); var browse = Theme.Button("폴더 선택", Browse); DockPanel.SetDock(browse, Dock.Right); row.Children.Add(browse);
-        folder = new TextBox { Text = settings.CaptureDirectory, FontSize = 13, Padding = new Thickness(8), VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) }; row.Children.Add(folder); stack.Children.Add(row);
+        folder = new TextBox { Text = settings.CaptureDirectory, FontSize = 13, Height = 36, Padding = new Thickness(8, 4, 8, 4), VerticalContentAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+        System.Windows.Automation.AutomationProperties.SetName(folder, "저장 폴더"); row.Children.Add(folder); stack.Children.Add(row);
         var note = Theme.Label("PNG · MP4 · GIF를 저장합니다. 기존 파일은 이동하지 않습니다.", 12, Theme.Muted); note.TextWrapping = TextWrapping.Wrap; note.Margin = new Thickness(0, 8, 0, 24); stack.Children.Add(note);
         var shortcutLabel = Theme.Label("캡처 단축키", 14); shortcutLabel.FontWeight = FontWeights.SemiBold; stack.Children.Add(shortcutLabel);
         shortcut = Theme.Button(KeyName(modifiers, key), () => { }); shortcut.Click += (_, _) => { recording = true; shortcut.Content = "새 조합을 누르세요 · Esc 취소"; shortcut.Focus(); }; shortcut.HorizontalAlignment = HorizontalAlignment.Left; shortcut.Margin = new Thickness(0, 10, 0, 0); stack.Children.Add(shortcut);
+        var shortcutNote = Theme.Label("버튼을 누른 뒤 Ctrl 또는 Alt가 포함된 조합을 입력하세요.\n녹화 시작·정지: Ctrl+Shift+9 (고정)", 12, Theme.Muted); shortcutNote.TextWrapping = TextWrapping.Wrap; shortcutNote.Margin = new Thickness(0, 8, 0, 0); stack.Children.Add(shortcutNote);
+        System.Windows.Automation.AutomationProperties.SetHelpText(shortcut, "캡처 단축키 변경");
         PreviewKeyDown += Record;
     }
     public static string KeyName(uint modifiers, uint key)
@@ -56,7 +59,7 @@ public sealed class SettingsDialog : Window
     }
     private void Browse()
     {
-        var picker = new Microsoft.Win32.OpenFolderDialog { Title = "Clip 이미지 저장 폴더", InitialDirectory = Directory.Exists(folder.Text) ? folder.Text : "" };
+        var picker = new Microsoft.Win32.OpenFolderDialog { Title = "Clip 저장 폴더", InitialDirectory = Directory.Exists(folder.Text) ? folder.Text : "" };
         if (picker.ShowDialog(this) == true) folder.Text = picker.FolderName;
     }
     private void Save()

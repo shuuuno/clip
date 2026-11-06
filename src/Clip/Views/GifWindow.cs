@@ -16,13 +16,13 @@ public sealed class GifWindow : Window
     public GifWindow(Window owner, string path)
     {
         Owner = owner; Title = "Clip GIF · " + Path.GetFileName(path); Width = 840; Height = 620; MinWidth = 450; MinHeight = 350;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Brushes.White;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Theme.Text;
         var animation = new GifAnimation(path);
         try
         {
             int[] delays = Enumerable.Range(0, animation.Count).Select(animation.Delay).ToArray();
             int[] ends = new int[delays.Length]; for (int i = 0; i < ends.Length; i++) ends[i] = delays[i] + (i == 0 ? 0 : ends[i - 1]);
-            var root = new DockPanel { Margin = new Thickness(18) }; Content = root;
+            var root = new DockPanel { Margin = new Thickness(24) }; Content = root;
             var bottom = new StackPanel(); DockPanel.SetDock(bottom, Dock.Bottom); root.Children.Add(bottom);
             var status = Theme.Label("", 12, Theme.Muted); status.Margin = new Thickness(0, 12, 0, 10); bottom.Children.Add(status);
             var buttons = new StackPanel { Orientation = Orientation.Horizontal }; bottom.Children.Add(buttons);
@@ -46,8 +46,8 @@ public sealed class GifWindow : Window
                 catch (Exception e) { failed = true; timer.Stop(); clock.Stop(); buttons.IsEnabled = false; status.Text = "GIF 프레임을 읽지 못했습니다. " + e.Message; }
             }
             timer.Tick += (_, _) => ShowFrame();
-            buttons.Children.Add(Theme.Button("재생", () => { clock.Start(); timer.Start(); }, true)); buttons.Children.Add(Theme.Button("일시 정지", () => { clock.Stop(); timer.Stop(); }));
-            buttons.Children.Add(Theme.Button("처음부터", () => { index = -1; clock.Restart(); ShowFrame(); timer.Start(); }));
+            buttons.Children.Add(Theme.ActionButton("재생", "play", () => { clock.Start(); timer.Start(); }, true)); buttons.Children.Add(Theme.QuietButton("일시 정지", "pause", () => { clock.Stop(); timer.Stop(); }));
+            buttons.Children.Add(Theme.QuietButton("처음부터", "restart", () => { index = -1; clock.Restart(); ShowFrame(); timer.Start(); }));
             Loaded += (_, _) => { clock.Start(); ShowFrame(); if (!failed) timer.Start(); };
             Closed += (_, _) => { timer.Stop(); image.Source = null; animation.Dispose(); };
         }

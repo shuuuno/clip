@@ -109,9 +109,9 @@ public sealed class CaptureOverlay : Window
             dc.DrawLine(new Pen(Brushes.OrangeRed, 1), new Point(loupe.Left, cy), new Point(loupe.Right, cy));
             string hint = owner.recording ? "녹화할 영역 드래그   ·   Enter 선택 완료   ·   Esc / 우클릭 취소   ·   한 모니터 안에서 선택" : "드래그 후 마우스를 놓으면 캡처·복사 완료   ·   Esc / 우클릭 취소";
             var bar = new Rect(Math.Max(12, (w - 760) / 2), Math.Max(12, h - 66), Math.Min(760, w - 24), 44);
-            dc.DrawRoundedRectangle(new SolidColorBrush(Color.FromRgb(15, 23, 42)), null, bar, 10, 10); DrawText(dc, hint, new Point(bar.X + 16, bar.Y + 12), 12);
+            dc.DrawRoundedRectangle(Theme.Panel, new Pen(Theme.Line, 1), bar, 4, 4); DrawText(dc, hint, new Point(bar.X + 16, bar.Y + 12), 12);
         }
-        private static void DrawText(DrawingContext dc, string text, Point point, double size) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Malgun Gothic"), size, Brushes.White, 1), point);
+        private void DrawText(DrawingContext dc, string text, Point point, double size) => dc.DrawText(new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(Theme.Font, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal), size, Theme.Text, VisualTreeHelper.GetDpi(this).PixelsPerDip), point);
     }
 }
 

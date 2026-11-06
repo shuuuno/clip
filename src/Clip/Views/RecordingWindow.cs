@@ -12,15 +12,15 @@ namespace Clip.Views;
 public sealed class RecordingWindow : Window
 {
     private readonly Button start, stop;
-    private readonly TextBlock state = Theme.Label("녹화 준비", 21);
+    private readonly TextBlock state = Theme.Label("녹화 준비", 24);
     private readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromMilliseconds(200) };
     private bool active, closing, excluded;
     public event Action? StartRequested, StopRequested, CancelRequested;
     public RecordingWindow(MonitorArea area, bool shortcutAvailable, Func<TimeSpan> elapsed)
     {
         Title = "Clip 녹화"; Width = 440; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen; Topmost = true; Background = Theme.Background; Foreground = Brushes.White;
-        var panel = new StackPanel { Margin = new Thickness(22) }; Content = panel;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen; Topmost = true; Background = Theme.Background; Foreground = Theme.Text;
+        var panel = new StackPanel { Margin = new Thickness(24) }; Content = panel; state.FontWeight = FontWeights.SemiBold;
         panel.Children.Add(state);
         var size = ScreenRecorder.EncodedSize(area);
         var detail = Theme.Label($"선택 {area.Width} × {area.Height}px · 최대 30fps · 소리 없음\n마우스 포인터는 녹화하지 않습니다.", 12, Theme.Muted);
@@ -30,10 +30,10 @@ public sealed class RecordingWindow : Window
         var hint = Theme.Label(shortcutAvailable ? "Ctrl+Shift+9: 시작 / 정지·저장" : "단축키 충돌: 이 창이나 트레이 메뉴로 정지하세요.", 12, Theme.Muted);
         hint.Margin = new Thickness(0, 12, 0, 12); panel.Children.Add(hint);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
-        start = Theme.Button("녹화 시작", () => StartRequested?.Invoke(), true);
-        stop = Theme.Button("정지·저장", () => StopRequested?.Invoke()); stop.IsEnabled = false;
+        start = Theme.ActionButton("녹화 시작", "video", () => StartRequested?.Invoke(), true);
+        stop = Theme.ActionButton("정지·저장", "stop", () => StopRequested?.Invoke()); stop.IsEnabled = false;
         buttons.Children.Add(start); buttons.Children.Add(stop); panel.Children.Add(buttons);
-        panel.Children.Add(Theme.Label("녹화 중 이 창을 닫으면 정지 후 저장합니다.", 11, Theme.Muted));
+        var closeNote = Theme.Label("녹화 중 이 창을 닫으면 정지 후 저장합니다.", 12, Theme.Muted); closeNote.Margin = new Thickness(0, 12, 0, 0); panel.Children.Add(closeNote);
         SourceInitialized += (_, _) => excluded = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041) && Native.SetWindowDisplayAffinity(new WindowInteropHelper(this).Handle, 0x11);
         timer.Tick += (_, _) => state.Text = "녹화 중  " + elapsed().ToString(@"hh\:mm\:ss");
         Closing += (_, e) =>

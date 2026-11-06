@@ -7,7 +7,7 @@ import win32api
 
 sys.stdout.reconfigure(encoding='utf-8')
 ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
-p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--data',required=True);p.add_argument('--report',required=True);a=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('--pid',type=int,required=True);p.add_argument('--data',required=True);p.add_argument('--report',required=True);p.add_argument('--screens',default='artifacts/ui/screens');a=p.parse_args();Path(a.screens).mkdir(parents=True,exist_ok=True)
 native=Application(backend='win32').connect(process=a.pid)
 main=next(w for w in native.windows() if w.window_text()=='Clip')
 main.maximize();time.sleep(.3)
@@ -45,10 +45,15 @@ def cut(im,horizontal,start,length):
         out.paste(im.crop((0,0,start,h)),(0,0));out.paste(im.crop((start+length,0,w,h)),(start,0))
     return out
 def shot(name):
-    main.set_focus();time.sleep(.15);r=main.rectangle();ImageGrab.grab(bbox=(r.left+12,r.top+12,r.right-12,r.bottom-12)).save(Path('artifacts/ui/screens')/name)
+    main.set_focus();time.sleep(.15);r=main.rectangle();ImageGrab.grab(bbox=(r.left+12,r.top+12,r.right-12,r.bottom-12)).save(Path(a.screens)/name)
 
-next(i for i in ui.descendants(control_type='ListItem') if 'qa-strip.png' in i.window_text()).select();time.sleep(.3)
-next(c for c in ui.descendants(control_type='ComboBox') if '화면 맞춤' in c.texts()).select('100%');time.sleep(.2)
+listing=ui.child_window(control_type='List').wrapper_object()
+for attempt in range(20):
+    found=[i for i in ui.descendants(control_type='ListItem') if 'qa-strip.png' in i.window_text()]
+    if found:break
+    listing.scroll('down','page');time.sleep(.1)
+assert found,'qa-strip.png';found[0].select();time.sleep(.3)
+next(c for c in ui.descendants(control_type='ComboBox') if c.window_text()=='확대 비율' or '화면 맞춤' in c.texts()).select('100%');time.sleep(.2)
 click('가로 띠 제거  H');drag(350,200,350,100);assert button('띠 제거 적용 · Enter').is_enabled();assert any('→   800 × 400 px' in t for t in texts()),texts()
 shot('23-strip-selection.png');key('{ESC}');dimensions(800,500);same(copied(),source);assert not button('띠 제거 적용 · Enter').is_enabled()
 results.append({'scenario':'역방향 드래그·결과 크기·Esc 취소','passed':True})
@@ -58,7 +63,7 @@ results.append({'scenario':'가로 띠 100px 제거·PNG/클립보드·Undo/Redo
 key('^z');key('j');drag(380,250,300,250);click('띠 제거 적용 · Enter');expected=cut(source,False,300,80);dimensions(720,500);file=save(expected)
 results.append({'scenario':'세로 띠 80px 제거·버튼 적용·PNG/클립보드','passed':True,'file':file})
 key('^z');key('h');drag(350,0,350,500);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ENTER}');dimensions(800,500);key('{ESC}')
-drag(350,100,350,100);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ESC}');assert main.is_visible() and main.is_enabled()
+key('h');drag(350,100,350,100);assert not button('띠 제거 적용 · Enter').is_enabled();key('{ESC}');assert main.is_visible() and main.is_enabled()
 results.append({'scenario':'전체 이미지·길이 0 선택 차단','passed':True})
 key('n');drag(100,50,100,50);assert any('주석 1개' in t for t in texts());key('h');drag(350,100,350,200);key('^z');assert not button('띠 제거 적용 · Enter').is_enabled();key('^+z')
 annotated=copied();drag(350,100,350,200);key('{ENTER}');assert any('주석 0개' in t for t in texts());file=save(cut(annotated,True,100,100));key('^z');same(copied(),annotated);assert any('주석 1개' in t for t in texts());key('^+z')
@@ -74,7 +79,7 @@ for c in controls:
     b=c.rectangle();assert c.is_visible() and r.left<=b.left<b.right<=r.right and r.top<=b.top<b.bottom<=r.bottom,(c.window_text(),b,r)
 for first,second in zip(controls,controls[1:]):
     x,y=first.rectangle(),second.rectangle();assert min(x.right,y.right)<=max(x.left,y.left) or min(x.bottom,y.bottom)<=max(x.top,y.top)
-next(c for c in ui.descendants(control_type='ComboBox') if '100%' in c.texts()).select('50%');click('가로 띠 제거  H');drag(350,50,350,80,w=800,h=400)
+next(c for c in ui.descendants(control_type='ComboBox') if c.window_text()=='확대 비율' or '100%' in c.texts()).select('50%');click('가로 띠 제거  H');drag(350,50,350,80,w=800,h=400)
 assert button('띠 제거 적용 · Enter').is_enabled()
 preview=next(t for t in texts() if t.startswith('800 × 400 px'));match=re.search(r'→\s+800 × (\d+) px',preview);assert match,preview
 # 50% × 175%에서는 화면 1px이 이미지 약 1.14px이므로 드래그 위치 반올림을 허용한다.

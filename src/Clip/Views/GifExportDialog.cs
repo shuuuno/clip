@@ -29,9 +29,9 @@ public sealed class GifExportDialog : Window
     {
         this.source = source; this.directory = directory; this.saved = saved;
         Owner = owner; Title = "Clip · GIF 내보내기"; Width = 530; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Brushes.White;
-        var root = new StackPanel { Margin = new Thickness(22) }; Content = root;
-        root.Children.Add(Theme.Label("GIF 내보내기", 24)); info.Margin = new Thickness(0, 12, 0, 18); root.Children.Add(info);
+        WindowStartupLocation = WindowStartupLocation.CenterOwner; Background = Theme.Background; Foreground = Theme.Text;
+        var root = new StackPanel { Margin = new Thickness(24) }; Content = root;
+        var title = Theme.Label("GIF 내보내기", 24); title.FontWeight = FontWeights.SemiBold; root.Children.Add(title); info.Margin = new Thickness(0, 8, 0, 24); root.Children.Add(info);
         AddField("시작 시간 (초)", start); AddField("끝 시간 (초)", end); AddField("가로 크기 (px)", width); AddField("초당 프레임", fps);
         AutomationProperties.SetName(fps, "GIF 초당 프레임"); root.Children.Add(fields);
         estimate.Margin = new Thickness(0, 12, 0, 8); estimate.TextWrapping = TextWrapping.Wrap; root.Children.Add(estimate);
