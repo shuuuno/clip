@@ -10,4 +10,8 @@ Clip(D:\projects\my-capture)에서 docs\brief_design_bolder.md에 따른 bolder�
 
 ## 수신 상태
 
-발송 결과를 아래에 기록한다.
+- 2026-11-06, `ask-grokbot.ps1 --source codex --timeout 90`로 위 본문 발송.
+- 메시지 ID `msg_2ba56eaa3386`, route `default`, 종료 코드 0.
+- **Grok Bot 수신 확인 응답을 받았다.** 큐 등록만 된 상태가 아니다.
+- 응답은 가로 리본·행 목록·완료 영역·제목/명도 변경, 빌드·25개 시나리오·50개 WPF 검사, Hallmark ship, 로컬 브랜치 상태와 결과 경로를 확인했다. 사용자에게 최종 전달됐는지는 별도 확인하지 않았다.
+- 구현 커밋 `a465f01`. 응답은 정보로만 취급했고 추가 실행의 승인으로 사용하지 않았다.
