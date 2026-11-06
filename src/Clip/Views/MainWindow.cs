@@ -58,13 +58,13 @@ public sealed class MainWindow : Window
     private readonly EditorSurface editor = new();
     private readonly ScrollViewer viewport = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(28) };
     private readonly ObservableCollection<LibraryEntry> items = new();
-    private readonly ListBox library = new() { BorderThickness = new Thickness(0), Background = Theme.Panel, Foreground = Brushes.White, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly ListBox library = new() { BorderThickness = new Thickness(0), Background = Theme.Canvas, Foreground = Theme.Text, HorizontalContentAlignment = HorizontalAlignment.Stretch };
     private readonly TextBlock status = Theme.Label("새 캡처 또는 이미지 열기로 시작하세요.", 12, Theme.Muted);
     private readonly TextBlock dimensions = Theme.Label("이미지를 캡처하거나 열어 주세요.", 12, Theme.Muted);
     private readonly TextBlock count = Theme.Label("0개", 12, Theme.Muted);
     private readonly TextBlock folderLabel = Theme.Label("", 11, Theme.Muted);
     private readonly TextBlock captureHint = Theme.Label("", 12, Theme.Muted);
-    private readonly TextBlock libraryEmpty = Theme.Label("저장한 파일이 없습니다.\nPNG · MP4 · GIF가 여기에 표시됩니다.", 12, Theme.Muted);
+    private readonly TextBlock libraryEmpty = Theme.Label("저장한 파일이 없습니다.\n\nPNG · MP4 · GIF\n저장한 파일을 여기에서 다시 여세요.", 12, Theme.Muted);
     private readonly StackPanel colorOptions = new(), strokeOptions = new(), textOptions = new();
     private readonly DockPanel options, info;
     private readonly Border empty;
@@ -107,13 +107,13 @@ public sealed class MainWindow : Window
         WindowChrome.SetIsHitTestVisibleInChrome(actions, true); DockPanel.SetDock(actions, Dock.Right); top.Children.Add(actions);
         actions.Children.Add(Theme.QuietButton("설정", "settings", ShowSettings)); actions.Children.Add(Theme.QuietButton("이미지 열기", "image", OpenFile));
         var record = Theme.QuietButton("영역 녹화", "video", app.ToggleRecording); record.ToolTip = "영역 녹화 · Ctrl+Shift+9"; actions.Children.Add(record);
-        capture = Theme.ActionButton("새 캡처", "capture", () => _ = app.CaptureAsync(), true); actions.Children.Add(capture);
+        capture = Theme.ActionButton("새 캡처", "capture", () => _ = app.CaptureAsync(), true); capture.Height = 40; capture.MinWidth = 112; actions.Children.Add(capture);
         var brand = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        var title = Theme.Label("Clip", 23); title.FontWeight = FontWeights.SemiBold; brand.Children.Add(title);
+        var title = Theme.Label("Clip", 26); title.FontWeight = FontWeights.SemiBold; brand.Children.Add(title);
         top.Children.Add(brand);
 
-        var footer = new Border { BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(20, 12, 12, 12), Background = Theme.Panel };
-        DockPanel.SetDock(footer, Dock.Bottom); root.Children.Add(footer);
+        var footer = new Border { BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 1, 0, 0), Padding = new Thickness(20, 12, 12, 16), Background = Theme.Panel };
+        DockPanel.SetDock(footer, Dock.Bottom);
         var footerRows = new DockPanel(); footer.Child = footerRows;
         status.TextWrapping = TextWrapping.Wrap; status.Margin = new Thickness(0, 0, 8, 10); DockPanel.SetDock(status, Dock.Top); footerRows.Children.Add(status);
         var bottom = new DockPanel(); footerRows.Children.Add(bottom);
@@ -122,35 +122,37 @@ public sealed class MainWindow : Window
         delete = Theme.Button("선택 삭제", () => editor.DeleteSelected());
         copy = Theme.ActionButton("복사 · Ctrl+C", "copy", () => _ = CopyAsync(), true);
         save = Theme.ActionButton("PNG 저장 · Ctrl+S", "save", () => SaveDocument());
+        copy.Height = save.Height = 44; copy.MinWidth = 144;
         output.Children.Add(save); output.Children.Add(copy);
         var selectionActions = new StackPanel { Orientation = Orientation.Horizontal }; selectionActions.Children.Add(crop); selectionActions.Children.Add(strip); selectionActions.Children.Add(delete); bottom.Children.Add(selectionActions);
 
-        var body = new Grid(); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(208) }); body.ColumnDefinitions.Add(new ColumnDefinition()); root.Children.Add(body);
-        var sidebarBorder = new Border { Background = Theme.Panel, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 1, 0) }; body.Children.Add(sidebarBorder);
+        var body = new Grid(); body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(232) }); body.ColumnDefinitions.Add(new ColumnDefinition()); root.Children.Add(body);
+        var sidebarBorder = new Border { Background = Theme.Canvas, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 1, 0) }; body.Children.Add(sidebarBorder);
         var sidebar = new DockPanel(); sidebarBorder.Child = sidebar;
-        var sideHead = new StackPanel { Margin = new Thickness(16, 18, 12, 12) }; DockPanel.SetDock(sideHead, Dock.Top); sidebar.Children.Add(sideHead);
+        var sideHead = new StackPanel { Margin = new Thickness(20, 24, 16, 20) }; DockPanel.SetDock(sideHead, Dock.Top); sidebar.Children.Add(sideHead);
         var libraryHead = new DockPanel(); var refresh = Theme.Button("", () => RefreshLibrary()); refresh.Content = Theme.Icon("refresh", 16); refresh.Width = 30; refresh.MinHeight = 30; refresh.Height = 30; refresh.Padding = new Thickness(6); refresh.Margin = new Thickness(0); refresh.ToolTip = "새로 고침";
         System.Windows.Automation.AutomationProperties.SetName(refresh, "새로 고침"); DockPanel.SetDock(refresh, Dock.Right); libraryHead.Children.Add(refresh);
-        var libraryTitle = Theme.Label("라이브러리", 14); libraryTitle.FontWeight = FontWeights.SemiBold; libraryHead.Children.Add(libraryTitle); sideHead.Children.Add(libraryHead);
+        var libraryTitle = Theme.Label("라이브러리", 18); libraryTitle.FontWeight = FontWeights.SemiBold; libraryHead.Children.Add(libraryTitle); sideHead.Children.Add(libraryHead);
         count.Margin = new Thickness(0, 4, 0, 0); sideHead.Children.Add(count);
-        folderLabel.TextTrimming = TextTrimming.CharacterEllipsis; folderLabel.Margin = new Thickness(16, 12, 12, 16); DockPanel.SetDock(folderLabel, Dock.Bottom); sidebar.Children.Add(folderLabel);
+        folderLabel.TextTrimming = TextTrimming.CharacterEllipsis; folderLabel.Margin = new Thickness(20, 16, 16, 20); DockPanel.SetDock(folderLabel, Dock.Bottom); sidebar.Children.Add(folderLabel);
         library.ItemsSource = items; library.SelectionChanged += LibrarySelected; library.SetValue(VirtualizingStackPanel.IsVirtualizingProperty, true); library.SetValue(VirtualizingStackPanel.VirtualizationModeProperty, VirtualizationMode.Recycling); library.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled);
-        var template = new DataTemplate(); var itemPanel = new FrameworkElementFactory(typeof(StackPanel));
-        var image = new FrameworkElementFactory(typeof(Image)); image.SetValue(FrameworkElement.HeightProperty, 84.0); image.SetValue(Image.StretchProperty, Stretch.Uniform); image.SetBinding(Image.SourceProperty, new Binding("Thumbnail")); itemPanel.AppendChild(image);
-        var fileName = new FrameworkElementFactory(typeof(TextBlock)); fileName.SetBinding(TextBlock.TextProperty, new Binding("Name")); fileName.SetBinding(FrameworkElement.ToolTipProperty, new Binding("Name")); fileName.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); fileName.SetValue(TextBlock.FontSizeProperty, 12.0); fileName.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 8, 0, 0)); itemPanel.AppendChild(fileName);
-        var caption = new FrameworkElementFactory(typeof(TextBlock)); caption.SetBinding(TextBlock.TextProperty, new Binding("Date")); caption.SetValue(TextBlock.ForegroundProperty, Theme.Muted); caption.SetValue(TextBlock.FontSizeProperty, 11.0); caption.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 4, 0, 0)); itemPanel.AppendChild(caption); template.VisualTree = itemPanel; library.ItemTemplate = template;
+        var template = new DataTemplate(); var itemPanel = new FrameworkElementFactory(typeof(DockPanel));
+        var image = new FrameworkElementFactory(typeof(Image)); image.SetValue(FrameworkElement.WidthProperty, 60.0); image.SetValue(FrameworkElement.HeightProperty, 52.0); image.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 0, 12, 0)); image.SetValue(DockPanel.DockProperty, Dock.Left); image.SetValue(Image.StretchProperty, Stretch.Uniform); image.SetBinding(Image.SourceProperty, new Binding("Thumbnail")); itemPanel.AppendChild(image);
+        var itemText = new FrameworkElementFactory(typeof(StackPanel)); itemText.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center); itemPanel.AppendChild(itemText);
+        var fileName = new FrameworkElementFactory(typeof(TextBlock)); fileName.SetBinding(TextBlock.TextProperty, new Binding("Name")); fileName.SetBinding(FrameworkElement.ToolTipProperty, new Binding("Name")); fileName.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); fileName.SetValue(TextBlock.FontSizeProperty, 12.0); itemText.AppendChild(fileName);
+        var caption = new FrameworkElementFactory(typeof(TextBlock)); caption.SetBinding(TextBlock.TextProperty, new Binding("Date")); caption.SetValue(TextBlock.ForegroundProperty, Theme.Muted); caption.SetValue(TextBlock.FontSizeProperty, 11.0); caption.SetValue(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis); caption.SetValue(FrameworkElement.MarginProperty, new Thickness(0, 6, 0, 0)); itemText.AppendChild(caption); template.VisualTree = itemPanel; library.ItemTemplate = template;
         var libraryBody = new Grid(); libraryBody.Children.Add(library); libraryEmpty.TextWrapping = TextWrapping.Wrap; libraryEmpty.VerticalAlignment = VerticalAlignment.Top; libraryEmpty.Margin = new Thickness(16, 12, 16, 0); libraryBody.Children.Add(libraryEmpty); sidebar.Children.Add(libraryBody);
 
-        var workspace = new Grid(); Grid.SetColumn(workspace, 1); body.Children.Add(workspace); workspace.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(136) }); workspace.ColumnDefinitions.Add(new ColumnDefinition());
-        var tools = new StackPanel { Margin = new Thickness(10, 14, 10, 10) }; var toolScroll = new ScrollViewer { Content = tools, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        workspace.Children.Add(new Border { Child = toolScroll, Background = Theme.Panel, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 1, 0) });
+        var area = new DockPanel(); Grid.SetColumn(area, 1); body.Children.Add(area);
+        var tools = new StackPanel { Orientation = Orientation.Horizontal };
+        var ribbon = new Border { Child = tools, Padding = new Thickness(16, 8, 16, 8), Background = Theme.Panel, BorderBrush = Theme.Line, BorderThickness = new Thickness(0, 0, 0, 1) };
+        DockPanel.SetDock(ribbon, Dock.Top); area.Children.Add(ribbon); area.Children.Add(footer);
         foreach (var pair in new[] { (Tool.Select, "선택  V", "선택", "select"), (Tool.Number, "번호  N", "번호", "number"), (Tool.Rectangle, "박스  R", "박스", "rectangle"), (Tool.Text, "텍스트  T", "텍스트", "text"), (Tool.Mosaic, "모자이크  M", "모자이크", "mosaic"), (Tool.Crop, "크롭  C", "크롭", "crop"), (Tool.RemoveRows, "가로 띠 제거  H", "가로 띠", "rows"), (Tool.RemoveColumns, "세로 띠 제거  J", "세로 띠", "columns") })
         {
-            if (pair.Item1 == Tool.Crop) tools.Children.Add(new Border { Background = Theme.Line, Height = 1, Margin = new Thickness(8, 12, 8, 12) });
+            if (pair.Item1 == Tool.Crop) tools.Children.Add(new Border { Background = Theme.Line, Width = 1, Margin = new Thickness(12, 4, 12, 4) });
             var target = pair.Item1; var button = Theme.ToolButton(pair.Item2, pair.Item3, pair.Item4, () => SetTool(target)); toolButtons[target] = button; tools.Children.Add(button);
         }
-        var area = new DockPanel(); Grid.SetColumn(area, 1); workspace.Children.Add(area);
-        options = new DockPanel { Margin = new Thickness(16, 12, 12, 12), MinHeight = 34 }; DockPanel.SetDock(options, Dock.Top); area.Children.Add(options);
+        options = new DockPanel { Margin = new Thickness(16, 6, 12, 6), MinHeight = 32 }; DockPanel.SetDock(options, Dock.Top); area.Children.Add(options);
         var history = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(history, Dock.Right); options.Children.Add(history);
         undo = Theme.Button("", () => Document?.Undo()); redo = Theme.Button("", () => Document?.Redo());
         foreach (var (button, icon, name) in new[] { (undo, "undo", "되돌리기"), (redo, "redo", "다시 실행") })
@@ -167,15 +169,16 @@ public sealed class MainWindow : Window
         colors.SelectedIndex = 0; colors.SelectionChanged += (_, _) => editor.MarkColor = (Color)((ComboBoxItem)colors.SelectedItem).Tag; AddOption(colorOptions, "색", colors);
         var width = new ComboBox { ItemsSource = new[] { 2, 3, 5, 8, 12 }, SelectedIndex = 1, Width = 62, Height = 32 }; width.SelectionChanged += (_, _) => editor.StrokeWidth = (int)width.SelectedItem; AddOption(strokeOptions, "굵기", width);
         var size = new ComboBox { ItemsSource = new[] { 16, 24, 32, 48, 64 }, SelectedIndex = 1, Width = 62, Height = 32 }; size.SelectionChanged += (_, _) => editor.TextSize = (int)size.SelectedItem; AddOption(textOptions, "글자", size);
-        info = new DockPanel { Margin = new Thickness(16, 0, 20, 12) }; DockPanel.SetDock(info, Dock.Top); area.Children.Add(info);
-        zoom = new ComboBox { ItemsSource = new[] { "화면 맞춤", "50%", "100%", "200%" }, SelectedIndex = 0, Width = 110, Height = 32, Margin = new Thickness(12, 0, 0, 0) }; DockPanel.SetDock(zoom, Dock.Right); info.Children.Add(zoom); info.Children.Add(dimensions); dimensions.TextWrapping = TextWrapping.Wrap;
+        info = new DockPanel { Margin = new Thickness(16, 0, 20, 6) }; DockPanel.SetDock(info, Dock.Top); area.Children.Add(info);
+        zoom = new ComboBox { ItemsSource = new[] { "화면 맞춤", "50%", "100%", "200%" }, SelectedIndex = 0, Width = 110, Height = 32, Margin = new Thickness(12, 0, 0, 0) }; history.Children.Add(zoom); info.Children.Add(dimensions); dimensions.TextWrapping = TextWrapping.Wrap;
         System.Windows.Automation.AutomationProperties.SetName(zoom, "확대 비율");
         zoom.SelectionChanged += (_, _) => { fit = zoom.SelectedIndex == 0; UpdateZoom(); }; viewport.SizeChanged += (_, _) => { if (fit) UpdateZoom(); };
         var stage = new Grid { Background = Theme.Canvas }; area.Children.Add(stage); viewport.Content = editor; editor.HorizontalAlignment = HorizontalAlignment.Center; editor.VerticalAlignment = VerticalAlignment.Center; stage.Children.Add(viewport);
-        var welcome = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 410, Margin = new Thickness(24) };
-        var welcomeTitle = Theme.Label("화면 캡처", 24); welcomeTitle.FontWeight = FontWeights.SemiBold; welcomeTitle.TextWrapping = TextWrapping.Wrap; welcome.Children.Add(welcomeTitle);
-        var help = Theme.Label("새 캡처를 누르고 영역을 드래그하세요.\n마우스를 놓으면 클립보드에 복사됩니다.", 13, Theme.Muted); help.TextWrapping = TextWrapping.Wrap; help.Margin = new Thickness(0, 12, 0, 8); welcome.Children.Add(help);
-        captureHint.Margin = new Thickness(0, 14, 0, 0); welcome.Children.Add(captureHint); empty = new Border { Child = welcome, Background = Theme.Canvas }; stage.Children.Add(empty);
+        var welcome = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, MaxWidth = 420, Margin = new Thickness(32) };
+        var captureGlyph = Theme.Icon("capture", 48); captureGlyph.Stroke = Theme.AccentText; captureGlyph.HorizontalAlignment = HorizontalAlignment.Left; captureGlyph.Margin = new Thickness(0, 0, 0, 24); welcome.Children.Add(captureGlyph);
+        var welcomeTitle = Theme.Label("화면 캡처", 32); welcomeTitle.FontWeight = FontWeights.SemiBold; welcomeTitle.TextWrapping = TextWrapping.Wrap; welcome.Children.Add(welcomeTitle);
+        var help = Theme.Label("새 캡처를 누르고 영역을 드래그하세요.\n마우스를 놓으면 클립보드에 복사됩니다.", 14, Theme.Muted); help.LineHeight = 24; help.TextWrapping = TextWrapping.Wrap; help.Margin = new Thickness(0, 12, 0, 24); welcome.Children.Add(help);
+        captureHint.Foreground = Theme.AccentText; welcome.Children.Add(new Border { Child = captureHint, Background = Theme.AccentSoft, Padding = new Thickness(12, 8, 12, 8), CornerRadius = new CornerRadius(4), HorizontalAlignment = HorizontalAlignment.Left }); empty = new Border { Child = welcome, Background = Theme.Canvas }; stage.Children.Add(empty);
         editor.StateChanged += UpdateState; editor.TextRequested += point => { var dialog = new TextDialog(this); if (dialog.ShowDialog() == true) editor.AddText(point, dialog.Value); };
         Closing += OnClosing; PreviewKeyDown += OnKey; Loaded += (_, _) => { RefreshLibrary(); UpdateState(); };
     }

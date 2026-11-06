@@ -12,10 +12,10 @@ namespace Clip.Views;
 
 public static class Theme
 {
-    public static readonly Brush Background = Brush("#16191F"), Panel = Brush("#1D2129"), Elevated = Brush("#282D37");
+    public static readonly Brush Background = Brush("#181E27"), Panel = Brush("#242B36"), Elevated = Brush("#303A49");
     public static readonly Brush Canvas = Brush("#101217"), Text = Brush("#F1F3F7"), Muted = Brush("#A4AEBD");
-    public static readonly Brush Line = Brush("#363E4B"), Accent = Brush("#2869E8"), AccentSoft = Brush("#21395C"), AccentText = Brush("#9BC1FF");
-    public static readonly Brush InputBorder = Brush("#74849B"), Disabled = Brush("#7D8796"), Error = Brush("#FFB4AB"), AccentInk = Brush("#FFFFFF");
+    public static readonly Brush Line = Brush("#434F60"), Accent = Brush("#2869E8"), AccentSoft = Brush("#21395C"), AccentText = Brush("#9BC1FF");
+    public static readonly Brush InputBorder = Brush("#8293A9"), Disabled = Brush("#7D8796"), Error = Brush("#FFB4AB"), AccentInk = Brush("#FFFFFF");
     public static readonly FontFamily Font = new("Segoe UI, Malgun Gothic");
     private static Brush Brush(string hex) { var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); b.Freeze(); return b; }
     public static void Apply(Application application)
@@ -51,11 +51,10 @@ public static class Theme
     public static Button ToolButton(string name, string label, string icon, Action click)
     {
         var button = Button(label, click); button.Style = (Style)Application.Current.FindResource("ToolButton");
-        var content = new DockPanel();
-        var shortcut = Label(name[^1..], 11, Muted); shortcut.Margin = new Thickness(6, 0, 0, 0);
-        DockPanel.SetDock(shortcut, Dock.Right); content.Children.Add(shortcut);
-        var glyph = Icon(icon, 16); glyph.Margin = new Thickness(0, 0, 8, 0);
-        DockPanel.SetDock(glyph, Dock.Left); content.Children.Add(glyph); content.Children.Add(new TextBlock { Text = label, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+        var content = new Grid(); content.RowDefinitions.Add(new RowDefinition { Height = new GridLength(20) }); content.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var glyph = Icon(icon, 18); glyph.HorizontalAlignment = HorizontalAlignment.Left; glyph.Margin = new Thickness(2, 0, 0, 0); content.Children.Add(glyph);
+        var shortcut = Label(name[^1..], 11, Muted); shortcut.HorizontalAlignment = HorizontalAlignment.Right; shortcut.VerticalAlignment = VerticalAlignment.Top; content.Children.Add(shortcut);
+        var caption = new TextBlock { Text = label, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 2, 0, 0) }; Grid.SetRow(caption, 1); content.Children.Add(caption);
         button.Content = content; button.ToolTip = name;
         AutomationProperties.SetName(button, name); AutomationProperties.SetAcceleratorKey(button, name[^1..]); return button;
     }

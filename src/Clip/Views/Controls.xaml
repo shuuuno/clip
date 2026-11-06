@@ -22,7 +22,7 @@
     <Setter Property="Background" Value="{DynamicResource ClipAccent}"/><Setter Property="Foreground" Value="{DynamicResource ClipAccentInk}"/>
   </Style>
   <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-    <Setter Property="Height" Value="40"/><Setter Property="Padding" Value="8,6"/><Setter Property="Margin" Value="0,2"/>
+    <Setter Property="Width" Value="72"/><Setter Property="Height" Value="52"/><Setter Property="Padding" Value="10,5"/><Setter Property="Margin" Value="2,0"/>
     <Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/>
     <Style.Triggers>
       <Trigger Property="Tag" Value="True"><Setter Property="Background" Value="{DynamicResource ClipAccentSoft}"/><Setter Property="Foreground" Value="{DynamicResource ClipAccentText}"/><Setter Property="BorderBrush" Value="{DynamicResource ClipAccentText}"/></Trigger>
