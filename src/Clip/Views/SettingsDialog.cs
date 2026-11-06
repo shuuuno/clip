@@ -53,7 +53,7 @@ public sealed class SettingsDialog : Window
         if (k == Key.Escape) { recording = false; shortcut.Content = KeyName(modifiers, key); return; }
         if (k is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin) return;
         var m = Keyboard.Modifiers;
-        if ((m & (ModifierKeys.Control | ModifierKeys.Alt)) == 0) { status.Text = "Ctrl 또는 Alt를 포함한 조합을 사용하세요."; return; }
+        if ((m & (ModifierKeys.Control | ModifierKeys.Alt)) == 0) { SetError("Ctrl 또는 Alt를 포함한 조합을 사용하세요."); return; }
         modifiers = ((m & ModifierKeys.Control) != 0 ? 2u : 0) | ((m & ModifierKeys.Shift) != 0 ? 4u : 0) | ((m & ModifierKeys.Alt) != 0 ? 1u : 0) | ((m & ModifierKeys.Windows) != 0 ? 8u : 0);
         key = (uint)KeyInterop.VirtualKeyFromKey(k); recording = false; shortcut.Content = KeyName(modifiers, key);
     }
@@ -64,16 +64,17 @@ public sealed class SettingsDialog : Window
     }
     private void Save()
     {
-        if (recording) { status.Text = "단축키 조합을 입력하거나 Esc로 취소한 뒤 저장해 주세요."; return; }
+        if (recording) { SetError("단축키 조합을 입력하거나 Esc로 취소한 뒤 저장해 주세요."); return; }
         try
         {
             if (!Path.IsPathFullyQualified(folder.Text)) throw new IOException("전체 폴더 경로를 입력하세요.");
             string path = Path.GetFullPath(folder.Text); Directory.CreateDirectory(path);
             string probe = Path.Combine(path, ".clip-write-" + Guid.NewGuid().ToString("N"));
             using (var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { stream.WriteByte(0); }
-            string? error = apply(new(path, modifiers, key), startAtLogin.IsChecked == true); if (error is not null) { status.Text = error; return; }
+            string? error = apply(new(path, modifiers, key), startAtLogin.IsChecked == true); if (error is not null) { SetError(error); return; }
             DialogResult = true;
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { status.Text = "저장할 수 없습니다: " + e.Message; }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { folder.BorderBrush = Theme.Error; SetError("저장할 수 없습니다: " + e.Message); }
     }
+    private void SetError(string message) { status.Foreground = Theme.Error; status.Text = message; }
 }

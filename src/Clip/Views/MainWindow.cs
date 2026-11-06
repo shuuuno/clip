@@ -66,6 +66,7 @@ public sealed class MainWindow : Window
     private readonly TextBlock captureHint = Theme.Label("", 12, Theme.Muted);
     private readonly TextBlock libraryEmpty = Theme.Label("저장한 파일이 없습니다.\nPNG · MP4 · GIF가 여기에 표시됩니다.", 12, Theme.Muted);
     private readonly StackPanel colorOptions = new(), strokeOptions = new(), textOptions = new();
+    private readonly DockPanel options, info;
     private readonly Border empty;
     private readonly Button save, copy, undo, redo, delete, crop, strip, capture;
     private readonly System.Collections.Generic.Dictionary<Tool, Button> toolButtons = new();
@@ -149,7 +150,7 @@ public sealed class MainWindow : Window
             var target = pair.Item1; var button = Theme.ToolButton(pair.Item2, pair.Item3, pair.Item4, () => SetTool(target)); toolButtons[target] = button; tools.Children.Add(button);
         }
         var area = new DockPanel(); Grid.SetColumn(area, 1); workspace.Children.Add(area);
-        var options = new DockPanel { Margin = new Thickness(16, 12, 12, 12), MinHeight = 34 }; DockPanel.SetDock(options, Dock.Top); area.Children.Add(options);
+        options = new DockPanel { Margin = new Thickness(16, 12, 12, 12), MinHeight = 34 }; DockPanel.SetDock(options, Dock.Top); area.Children.Add(options);
         var history = new StackPanel { Orientation = Orientation.Horizontal }; DockPanel.SetDock(history, Dock.Right); options.Children.Add(history);
         undo = Theme.Button("", () => Document?.Undo()); redo = Theme.Button("", () => Document?.Redo());
         foreach (var (button, icon, name) in new[] { (undo, "undo", "되돌리기"), (redo, "redo", "다시 실행") })
@@ -166,7 +167,7 @@ public sealed class MainWindow : Window
         colors.SelectedIndex = 0; colors.SelectionChanged += (_, _) => editor.MarkColor = (Color)((ComboBoxItem)colors.SelectedItem).Tag; AddOption(colorOptions, "색", colors);
         var width = new ComboBox { ItemsSource = new[] { 2, 3, 5, 8, 12 }, SelectedIndex = 1, Width = 62, Height = 32 }; width.SelectionChanged += (_, _) => editor.StrokeWidth = (int)width.SelectedItem; AddOption(strokeOptions, "굵기", width);
         var size = new ComboBox { ItemsSource = new[] { 16, 24, 32, 48, 64 }, SelectedIndex = 1, Width = 62, Height = 32 }; size.SelectionChanged += (_, _) => editor.TextSize = (int)size.SelectedItem; AddOption(textOptions, "글자", size);
-        var info = new DockPanel { Margin = new Thickness(16, 0, 20, 12) }; DockPanel.SetDock(info, Dock.Top); area.Children.Add(info);
+        info = new DockPanel { Margin = new Thickness(16, 0, 20, 12) }; DockPanel.SetDock(info, Dock.Top); area.Children.Add(info);
         zoom = new ComboBox { ItemsSource = new[] { "화면 맞춤", "50%", "100%", "200%" }, SelectedIndex = 0, Width = 110, Height = 32, Margin = new Thickness(12, 0, 0, 0) }; DockPanel.SetDock(zoom, Dock.Right); info.Children.Add(zoom); info.Children.Add(dimensions); dimensions.TextWrapping = TextWrapping.Wrap;
         System.Windows.Automation.AutomationProperties.SetName(zoom, "확대 비율");
         zoom.SelectionChanged += (_, _) => { fit = zoom.SelectedIndex == 0; UpdateZoom(); }; viewport.SizeChanged += (_, _) => { if (fit) UpdateZoom(); };
@@ -205,6 +206,7 @@ public sealed class MainWindow : Window
     private void UpdateState()
     {
         bool has = Document is not null; empty.Visibility = has ? Visibility.Collapsed : Visibility.Visible;
+        options.Visibility = info.Visibility = has ? Visibility.Visible : Visibility.Collapsed;
         save.IsEnabled = copy.IsEnabled = has && !busy; undo.IsEnabled = Document?.CanUndo == true; redo.IsEnabled = Document?.CanRedo == true; delete.IsEnabled = editor.HasSelection; crop.Visibility = editor.HasCrop ? Visibility.Visible : Visibility.Collapsed;
         strip.Visibility = editor.IsStripTool && has ? Visibility.Visible : Visibility.Collapsed; strip.IsEnabled = editor.CanRemoveStrip;
         delete.Visibility = editor.HasSelection ? Visibility.Visible : Visibility.Collapsed;
@@ -217,7 +219,7 @@ public sealed class MainWindow : Window
         strokeOptions.IsEnabled = has && editor.Tool is Tool.Rectangle or Tool.Mosaic;
         textOptions.IsEnabled = has && editor.Tool is Tool.Number or Tool.Text;
         zoom.IsEnabled = has;
-        if (has) dimensions.Text = $"{Document!.Width} × {Document.Height} px   ·   주석 {Document.Marks.Count}개   ·   {(Document.IsDirty ? "저장 전" : "저장됨")}";
+        if (has) dimensions.Text = $"{Document!.Width} × {Document.Height} px    주석 {Document.Marks.Count}개    {(Document.IsDirty ? "저장 전" : "저장됨")}";
         else dimensions.Text = "이미지를 캡처하거나 열어 주세요.";
         if (editor.PendingStrip is { } r && Document is { } doc)
             dimensions.Text += editor.CanRemoveStrip

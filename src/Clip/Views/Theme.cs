@@ -15,11 +15,12 @@ public static class Theme
     public static readonly Brush Background = Brush("#16191F"), Panel = Brush("#1D2129"), Elevated = Brush("#282D37");
     public static readonly Brush Canvas = Brush("#101217"), Text = Brush("#F1F3F7"), Muted = Brush("#A4AEBD");
     public static readonly Brush Line = Brush("#363E4B"), Accent = Brush("#2869E8"), AccentSoft = Brush("#21395C"), AccentText = Brush("#9BC1FF");
+    public static readonly Brush InputBorder = Brush("#74849B"), Disabled = Brush("#7D8796"), Error = Brush("#FFB4AB"), AccentInk = Brush("#FFFFFF");
     public static readonly FontFamily Font = new("Segoe UI, Malgun Gothic");
     private static Brush Brush(string hex) { var b = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)); b.Freeze(); return b; }
     public static void Apply(Application application)
     {
-        foreach (var (key, value) in new[] { ("Background", Background), ("Panel", Panel), ("Elevated", Elevated), ("Canvas", Canvas), ("Text", Text), ("Muted", Muted), ("Line", Line), ("Accent", Accent), ("AccentSoft", AccentSoft), ("AccentText", AccentText) })
+        foreach (var (key, value) in new[] { ("Background", Background), ("Panel", Panel), ("Elevated", Elevated), ("Canvas", Canvas), ("Text", Text), ("Muted", Muted), ("Line", Line), ("Accent", Accent), ("AccentSoft", AccentSoft), ("AccentText", AccentText), ("InputBorder", InputBorder), ("Disabled", Disabled), ("Error", Error), ("AccentInk", AccentInk) })
             application.Resources["Clip" + key] = value;
         application.Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("/Clip;component/Views/Controls.xaml", UriKind.Relative) });
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, args) =>
