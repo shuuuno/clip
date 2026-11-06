@@ -12,6 +12,7 @@ public sealed class SettingsDialog : Window
     private readonly TextBox folder;
     private readonly Button shortcut;
     private readonly CheckBox startAtLogin;
+    private readonly CheckBox openAfterCapture;
     private readonly TextBlock status = Theme.Label("설정은 이 기기에만 저장됩니다.", 12, Theme.Muted);
     private uint modifiers, key;
     private bool recording;
@@ -31,6 +32,8 @@ public sealed class SettingsDialog : Window
         var stack = new StackPanel { Margin = new Thickness(28, 24, 28, 24) }; root.Children.Add(new ScrollViewer { Content = stack, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
         startAtLogin = new CheckBox { Content = "Windows 로그인 시 시작", IsChecked = startupEnabled, FontSize = 14 }; stack.Children.Add(startAtLogin);
         var startupNote = Theme.Label("창을 띄우지 않고 트레이에서 대기합니다.\n현재 사용자에게만 등록하며 저장 버튼을 눌러야 적용됩니다.", 12, Theme.Muted); startupNote.TextWrapping = TextWrapping.Wrap; startupNote.Margin = new Thickness(50, 8, 0, 0); stack.Children.Add(startupNote);
+        openAfterCapture = new CheckBox { Content = "캡처 후 Clip 창 열기", IsChecked = settings.OpenAfterCapture, FontSize = 14, Margin = new Thickness(0, 20, 0, 0) }; stack.Children.Add(openAfterCapture);
+        var captureNote = Theme.Label("기본은 창 없이 복사·자동 저장합니다. 알림을 누르면 캡처를 엽니다.", 12, Theme.Muted); captureNote.TextWrapping = TextWrapping.Wrap; captureNote.Margin = new Thickness(50, 8, 0, 0); stack.Children.Add(captureNote);
         stack.Children.Add(new Border { Height = 1, Background = Theme.Line, Margin = new Thickness(0, 24, 0, 24) });
         var label = Theme.Label("저장 폴더", 18); label.FontWeight = FontWeights.SemiBold; label.Margin = new Thickness(0, 0, 0, 12); stack.Children.Add(label);
         var row = new DockPanel(); var browse = Theme.Button("폴더 선택", Browse); DockPanel.SetDock(browse, Dock.Right); row.Children.Add(browse);
@@ -72,7 +75,7 @@ public sealed class SettingsDialog : Window
             string path = Path.GetFullPath(folder.Text); Directory.CreateDirectory(path);
             string probe = Path.Combine(path, ".clip-write-" + Guid.NewGuid().ToString("N"));
             using (var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose)) { stream.WriteByte(0); }
-            string? error = apply(new(path, modifiers, key), startAtLogin.IsChecked == true); if (error is not null) { SetError(error); return; }
+            string? error = apply(new(path, modifiers, key, openAfterCapture.IsChecked == true), startAtLogin.IsChecked == true); if (error is not null) { SetError(error); return; }
             DialogResult = true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { folder.BorderBrush = Theme.Error; SetError("저장할 수 없습니다: " + e.Message); }

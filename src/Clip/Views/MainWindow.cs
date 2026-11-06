@@ -185,11 +185,17 @@ public sealed class MainWindow : Window
 
     public void ShowLibrary() { Show(); WindowState = WindowState.Normal; Activate(); }
     public void SetStatus(string text) => status.Text = text;
-    public void LoadCapture(BitmapSource bitmap)
+    public void LoadCapture(BitmapSource bitmap, bool copyAutomatically = true)
     {
         ShowLibrary(); SetDocument(new ImageDocument(bitmap, true)); opened = null;
         SetStatus("캡처했습니다. 클립보드로 복사하는 중입니다.");
-        _ = CopyAsync("캡처를 클립보드에 복사했습니다. 바로 붙여넣거나 주석을 추가하세요. PNG 저장은 별도입니다.");
+        if (copyAutomatically) _ = CopyAsync("캡처를 클립보드에 복사했습니다. 바로 붙여넣거나 주석을 추가하세요. PNG 저장은 별도입니다.");
+    }
+    public void OpenCapture(string path, bool confirmDiscard = true)
+    {
+        ShowLibrary();
+        if (confirmDiscard && !ConfirmDiscard()) return;
+        LoadFile(path); RefreshLibrary(path);
     }
     private void SetDocument(ImageDocument document) { editor.Document = document; SetTool(Tool.Select); fit = true; zoom.SelectedIndex = 0; UpdateZoom(); UpdateState(); }
     private void SetTool(Tool tool) { editor.Tool = tool; editor.Focus(); SetStatus(tool switch
@@ -245,13 +251,19 @@ public sealed class MainWindow : Window
     }
     private async Task CopyAsync(string? successMessage = null)
     {
-        if (Document is null) return; int request = ++copyRequest; busy = true; UpdateState();
+        if (Document is null) return;
+        try { await CopyBitmapAsync(Document.Render(), successMessage); }
+        catch (Exception error) { SetStatus("복사 실패 · " + error.Message); }
+    }
+    public async Task<bool> CopyBitmapAsync(BitmapSource bitmap, string? successMessage = null)
+    {
+        int request = ++copyRequest; busy = true; UpdateState();
         try
         {
-            var bitmap = Document.Render(); Exception? failure = null;
+            Exception? failure = null;
             for (int i = 0; i < 5; i++)
             {
-                if (request != copyRequest) return;
+                if (request != copyRequest) return false;
                 try
                 {
                     using var png = new MemoryStream(); var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap)); encoder.Save(png);
@@ -260,8 +272,9 @@ public sealed class MainWindow : Window
                 catch (System.Runtime.InteropServices.ExternalException e) { failure = e; await Task.Delay(100); }
             }
             if (request == copyRequest) SetStatus(failure is null ? successMessage ?? "편집한 이미지를 복사했습니다. PNG 저장은 별도입니다." : "클립보드가 사용 중입니다. 캡처는 유지됩니다. 복사 버튼을 다시 눌러 주세요.");
+            return request == copyRequest && failure is null;
         }
-        catch (Exception e) { if (request == copyRequest) SetStatus("복사 실패 · " + e.Message); }
+        catch (Exception e) { if (request == copyRequest) SetStatus("복사 실패 · " + e.Message); return false; }
         finally { if (request == copyRequest) { busy = false; UpdateState(); } }
     }
     public bool ConfirmDiscard()
@@ -315,6 +328,8 @@ public sealed class MainWindow : Window
             items.Clear(); folderLabel.Text = app.Settings.CaptureDirectory; folderLabel.ToolTip = app.Settings.CaptureDirectory;
             if (Directory.Exists(app.Settings.CaptureDirectory))
                 foreach (var file in new DirectoryInfo(app.Settings.CaptureDirectory).EnumerateFiles().Where(x => !x.Name.StartsWith(".clip-", StringComparison.OrdinalIgnoreCase) && (x.Extension.Equals(".png", StringComparison.OrdinalIgnoreCase) || x.Extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) || x.Extension.Equals(".gif", StringComparison.OrdinalIgnoreCase))).OrderByDescending(x => x.LastWriteTimeUtc).Take(500)) items.Add(new LibraryEntry(file.FullName));
+            // 저장 폴더를 바꾼 뒤 예전 알림을 눌러도 해당 캡처를 선택한다.
+            if (selectedPath is not null && File.Exists(selectedPath) && !items.Any(x => x.Path == selectedPath)) items.Insert(0, new LibraryEntry(selectedPath));
             count.Text = $"최근 {items.Count}개"; libraryEmpty.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             if (selectedPath is not null) { opened = items.FirstOrDefault(x => x.Path == selectedPath); library.SelectedItem = opened; }
         }

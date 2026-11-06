@@ -12,6 +12,8 @@ using Clip.Platform;
 using Clip.Views;
 using Clip.Recording;
 using Forms = System.Windows.Forms;
+using Velopack;
+using CommunityToolkit.WinUI.Notifications;
 
 namespace Clip;
 
@@ -20,6 +22,8 @@ public static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // 실행 중인 인스턴스의 편집을 보호한다. 업데이트 적용은 단일 인스턴스 확인 뒤에만 한다.
+        VelopackApp.Build().SetAutoApplyOnStartup(false).OnBeforeUninstallFastCallback(_ => ToastNotificationManagerCompat.Uninstall()).Run();
         Native.SetProcessDpiAwarenessContext(new IntPtr(-4));
         using var mutex = new Mutex(true, "Local\\Clip.Capture.SingleInstance.v1", out bool first);
         if (!first)
@@ -27,7 +31,7 @@ public static class Program
             try { using var signal = EventWaitHandle.OpenExisting("Local\\Clip.Capture.Activate.v1"); signal.Set(); } catch (WaitHandleCannotBeOpenedException) { }
             return;
         }
-        try { new ClipApplication(args).Run(); }
+        try { AppUpdates.ApplyPendingAtStartup(args); new ClipApplication(args).Run(); }
         catch (Exception e) { MessageBox.Show("Clip 실행 중 문제가 발생했습니다.\n" + e.Message, "Clip", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally { mutex.ReleaseMutex(); }
     }
@@ -38,6 +42,9 @@ public sealed class ClipApplication : Application
     private readonly SettingsStore store;
     private readonly StartupRegistration startup;
     private readonly bool startHidden;
+    private bool restoreCaptureWindow;
+    private CaptureNotifications? notifications;
+    private readonly AppUpdates updates = new();
     private HotkeyService? hotkey;
     private HotkeyService? recordHotkey;
     private bool recordHotkeyRegistered;
@@ -61,11 +68,13 @@ public sealed class ClipApplication : Application
     {
         store = new(SettingsStore.ResolveDataDirectory(args)); Settings = store.Load(); ShutdownMode = ShutdownMode.OnExplicitShutdown;
         startup = new(Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Clip.exe"), store.DataDirectory);
-        startHidden = args.Contains("--startup", StringComparer.Ordinal);
+        startHidden = args.Contains("--startup", StringComparer.Ordinal) || ToastNotificationManagerCompat.WasCurrentProcessToastActivated();
     }
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e); Theme.Apply(this); window = new Views.MainWindow(this); MainWindow = window;
+        try { notifications = new CaptureNotifications(path => Dispatcher.BeginInvoke(() => { if (!quitting && !selecting && recordingWindow is null && window.IsEnabled) window.OpenCapture(path); })); }
+        catch (Exception) { window.SetStatus("Windows 알림을 준비하지 못했습니다. 캡처는 라이브러리에서 열 수 있습니다."); }
         hotkey = new(); hotkey.Pressed += () => _ = CaptureAsync(); hotkeyRegistered = hotkey.Set(Settings.Modifiers, Settings.KeyCode);
         recordHotkey = new(); recordHotkey.Pressed += ToggleRecording; recordHotkeyRegistered = recordHotkey.Set(6, 57);
         icon = MakeIcon(); tray = new() { Icon = icon, Text = "Clip · 화면 캡처", Visible = true };
@@ -86,6 +95,7 @@ public sealed class ClipApplication : Application
         else window.Show();
         if (!hotkeyRegistered) window.SetStatus("캡처 단축키가 다른 앱과 충돌합니다. 새 캡처 버튼을 쓰거나 설정에서 바꿔 주세요.");
         else if (store.Warning is not null) window.SetStatus(store.Warning);
+        _ = updates.CheckAsync(message => { if (!quitting) window.SetStatus(message); });
     }
     public string? ApplySettings(ClipSettings next, bool startAtLogin)
     {
@@ -113,8 +123,8 @@ public sealed class ClipApplication : Application
     private async Task SelectRegionAsync(bool recording)
     {
         if (selecting || quitting || recordingWindow is not null || !window.IsEnabled) return;
-        if (!recording && !window.ConfirmDiscard()) return;
-        selecting = true; window.Hide();
+        if (!recording && Settings.OpenAfterCapture && !window.ConfirmDiscard()) return;
+        restoreCaptureWindow = window.IsVisible; selecting = true; window.Hide();
         try
         {
             await Task.Delay(180);
@@ -134,8 +144,34 @@ public sealed class ClipApplication : Application
         }
         catch (Exception e) { CloseOverlays(); window.ShowLibrary(); window.SetStatus("캡처하지 못했습니다. 다시 시도해 주세요. " + e.Message); }
     }
-    private void CompleteCapture(BitmapSource bitmap) { CloseOverlays(); window.LoadCapture(bitmap); }
-    private void CancelCapture() { CloseOverlays(); window.ShowLibrary(); window.SetStatus("캡처를 취소했습니다. 파일은 생성하지 않았습니다."); }
+    private async void CompleteCapture(BitmapSource bitmap)
+    {
+        CloseOverlays(); bool openAfterCapture = Settings.OpenAfterCapture;
+        string path;
+        try
+        {
+            path = new Clip.Imaging.ImageDocument(bitmap, true).SaveNew(Settings.CaptureDirectory);
+            window.RefreshLibrary();
+        }
+        catch (Exception error)
+        {
+            // 저장 실패 때 기존 편집의 폐기 확인을 거치고 새 캡처 복사를 재시도한다.
+            window.ShowLibrary();
+            if (openAfterCapture || window.ConfirmDiscard()) window.LoadCapture(bitmap, false);
+            await window.CopyBitmapAsync(bitmap);
+            window.SetStatus("자동 저장 실패 · 클립보드 복사를 시도했습니다. " + error.Message);
+            return;
+        }
+        bool copied = await window.CopyBitmapAsync(bitmap, "캡처를 복사하고 라이브러리에 저장했습니다.");
+        if (quitting) return;
+        if (openAfterCapture && !selecting && recordingWindow is null) window.OpenCapture(path, false);
+        else
+        {
+            try { notifications?.Show(path, copied); }
+            catch (Exception) { window.SetStatus("Windows 알림을 표시하지 못했습니다. 캡처는 라이브러리에 저장됐습니다."); }
+        }
+    }
+    private void CancelCapture() { CloseOverlays(); if (restoreCaptureWindow) window.ShowLibrary(); window.SetStatus("캡처를 취소했습니다. 파일은 생성하지 않았습니다."); }
     private void CloseOverlays() { watchdog.Stop(); foreach (var overlay in overlays) overlay.Close(); overlays.Clear(); selecting = false; }
     private void ShowMain()
     {
@@ -207,7 +243,7 @@ public sealed class ClipApplication : Application
         quitting = true; watchdog.Stop(); recordingTimer.Stop(); wait?.Unregister(null); activation?.Dispose(); hotkey?.Dispose(); recordHotkey?.Dispose();
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= DisplayChanged;
         if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
-        icon?.Dispose(); base.OnExit(e);
+        notifications?.Dispose(); updates.Dispose(); icon?.Dispose(); base.OnExit(e);
     }
     [DllImport("user32.dll")] private static extern bool DestroyIcon(IntPtr handle);
     private static System.Drawing.Icon MakeIcon()
