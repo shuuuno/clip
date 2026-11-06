@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace Clip;
 
-public sealed record ClipSettings(string CaptureDirectory, uint Modifiers = 6, uint KeyCode = 50);
+public sealed record ClipSettings(string CaptureDirectory, uint Modifiers = 6, uint KeyCode = 50, bool OpenAfterCapture = false);
 
 public sealed class SettingsStore
 {
@@ -38,6 +38,9 @@ public sealed class SettingsStore
     {
         for (int i = 0; i + 1 < args.Length; i++)
             if (args[i] == "--data-dir") return Path.GetFullPath(args[i + 1]);
+        // 설치판의 current 폴더는 업데이트 때 교체된다. 사용자 데이터는 그 밖에 둔다.
+        if (Velopack.Locators.VelopackLocator.Current is { CurrentlyInstalledVersion: not null, IsPortable: false })
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Clip", "data");
         var folder = new DirectoryInfo(AppContext.BaseDirectory);
         while (folder is not null)
         {

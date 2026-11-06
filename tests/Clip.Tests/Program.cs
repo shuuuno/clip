@@ -15,6 +15,12 @@ internal static class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 3 && args[0] == "--update-review") return UpdateReview.Run(args[1], args[2]);
+        if (args.Length == 3 && args[0] == "--quick-capture-review")
+        {
+            Native.SetProcessDpiAwarenessContext(new IntPtr(-4));
+            return QuickCaptureReview.Run(args[1], args[2]);
+        }
         if (args.Length == 3 && args[0] == "--ui-review-app")
         {
             // 녹화창 비교 촬영에만 사용한다. 제품 실행 경로와 캡처 제외 정책은 변경하지 않는다.
@@ -162,6 +168,16 @@ internal static class Program
                 var store = new SettingsStore(Path.Combine(work, "config")); var defaults = store.Load(); File.WriteAllText(store.PathName, "broken");
                 Equal(defaults, store.Load()); Equal("broken", File.ReadAllText(store.PathName)); Check(store.Warning is not null, "복구 안내");
                 var expected = new ClipSettings(work, 6, 51); store.Save(expected); Equal(expected, new SettingsStore(store.DataDirectory).Load());
+            });
+            Run("빠른 캡처 기본값·이전 설정 호환·창 열기 옵션 유지", () =>
+            {
+                var store = new SettingsStore(Path.Combine(work, "quick-settings"));
+                Check(!store.Load().OpenAfterCapture, "새 설치는 창 없이 캡처");
+                File.WriteAllText(store.PathName, System.Text.Json.JsonSerializer.Serialize(new { CaptureDirectory = work, Modifiers = 6, KeyCode = 50 }));
+                Check(!store.Load().OpenAfterCapture, "이전 설정에도 새 기본값 적용");
+                var expected = new ClipSettings(work, OpenAfterCapture: true);
+                store.Save(expected); Equal(expected, new SettingsStore(store.DataDirectory).Load());
+                Equal(Path.GetFullPath(work), SettingsStore.ResolveDataDirectory(new[] { "--data-dir", work }));
             });
             Run("자동 실행 명령줄 경로·공백·루트 경로·길이 제한", () =>
             {

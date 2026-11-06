@@ -7,7 +7,7 @@ $productProject = [System.Security.SecurityElement]::Escape([System.IO.Path]::Ge
 $reviewSource = [System.Security.SecurityElement]::Escape((Join-Path $PSScriptRoot 'design-polish-review.cs'))
 @"
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0-windows10.0.18362.0</TargetFramework><UseWPF>true</UseWPF><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
   <ItemGroup><ProjectReference Include="$productProject"/><Compile Include="$reviewSource"/></ItemGroup>
 </Project>
 "@ | Set-Content -LiteralPath (Join-Path $reviewProject 'Review.csproj') -Encoding UTF8
